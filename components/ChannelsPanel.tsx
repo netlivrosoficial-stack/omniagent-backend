@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AgentConfig } from '../types';
 import { CheckCircle2 } from 'lucide-react';
+import ChannelConfigModal from './ChannelConfigModal';
 
 // Custom SVG Icons created to resemble brand logos without external assets
 const TelegramIcon = () => (
@@ -44,9 +45,10 @@ interface ChannelCardProps {
   description: string;
   connected: boolean;
   onToggle: () => void;
+  onConfigure: () => void; // New prop for configuration
 }
 
-const ChannelCard: React.FC<ChannelCardProps> = ({ icon, title, description, connected, onToggle }) => (
+const ChannelCard: React.FC<ChannelCardProps> = ({ icon, title, description, connected, onToggle, onConfigure }) => (
   <div className="bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col justify-between relative overflow-hidden transition-all hover:border-slate-600 hover:shadow-lg">
     {connected && (
       <div className="absolute top-2 right-2 text-emerald-400 bg-emerald-900/50 p-1 rounded-full">
@@ -61,9 +63,9 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ icon, title, description, con
     <div className="border-t border-slate-700 p-4">
       {connected ? (
          <div className="flex justify-center items-center space-x-4">
-           <button className="text-sm text-slate-300 hover:text-white">Visualizar</button>
+           <button onClick={onConfigure} className="text-sm text-slate-300 hover:text-white">Visualizar</button>
            <span className="text-slate-600">|</span>
-           <button className="text-sm text-slate-300 hover:text-white">Configurações</button>
+           <button onClick={onConfigure} className="text-sm text-slate-300 hover:text-white">Configurações</button>
          </div>
       ) : (
         <button 
@@ -83,6 +85,9 @@ interface ChannelsPanelProps {
 }
 
 const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<{ id: keyof AgentConfig['channels'], title: string } | null>(null);
+
   const handleToggle = (channel: keyof AgentConfig['channels']) => {
     setConfig(prev => ({
       ...prev,
@@ -92,6 +97,16 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
       }
     }));
   };
+  
+  const handleOpenModal = (channelId: keyof AgentConfig['channels'], channelTitle: string) => {
+      setSelectedChannel({ id: channelId, title: channelTitle });
+      setIsModalOpen(true);
+  }
+  
+  const handleCloseModal = () => {
+      setIsModalOpen(false);
+      setSelectedChannel(null);
+  }
 
   const channelData = [
     { id: 'telegram', icon: <TelegramIcon />, title: 'Telegram', description: 'Responder via Telegram' },
@@ -117,10 +132,20 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
                 description={channel.description}
                 connected={config.channels[channel.id as keyof AgentConfig['channels']]}
                 onToggle={() => handleToggle(channel.id as keyof AgentConfig['channels'])}
+                onConfigure={() => handleOpenModal(channel.id as keyof AgentConfig['channels'], channel.title)}
              />
           ))}
         </div>
       </div>
+      
+      {selectedChannel && (
+          <ChannelConfigModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              channelName={selectedChannel.title}
+              isConnected={config.channels[selectedChannel.id]}
+          />
+      )}
     </div>
   );
 };
