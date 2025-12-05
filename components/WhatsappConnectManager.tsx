@@ -19,23 +19,25 @@ interface WhatsappConnectManagerProps {
 const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConnected, onUpdateStatus }) => {
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);
+    const [isAuthLoading, setIsAuthLoading] = useState(true); // Novo estado
     const [error, setError] = useState<string | null>(null);
-    const [userId, setUserId] = useState<string | null>(null); // Armazenar o ID do usuário
+    const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
         // 1. Obter o ID do usuário primeiro
         const getUserId = async () => {
-            setLoading(true);
+            setIsAuthLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
+            
             if (user) {
                 setUserId(user.id);
-                setError(null); // Limpa o erro se o usuário for encontrado
+                setError(null);
                 fetchSession(user.id);
             } else {
-                // Se não houver usuário, definimos o erro, mas o loading será false
                 setError("Usuário não autenticado.");
                 setLoading(false);
             }
+            setIsAuthLoading(false);
         };
         getUserId();
     }, []);
@@ -43,7 +45,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     // Função para buscar o estado atual da sessão no Supabase
     const fetchSession = async (id: string) => {
         setLoading(true);
-        setError(null); // Limpa o erro antes de buscar a sessão
+        setError(null);
         
         const { data, error } = await supabase
             .from('whatsapp_sessions')
@@ -156,17 +158,17 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const qrCodeData = session?.qr_code_data;
 
     const renderContent = () => {
-        // Se estiver carregando e não tivermos dados de sessão, mostramos o spinner
-        if (loading && !session) {
+        // Se estiver carregando a autenticação, mostramos o spinner
+        if (isAuthLoading) {
             return (
                 <div className="flex justify-center items-center py-10 text-blue-400">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                    Carregando status da sessão...
+                    Verificando autenticação...
                 </div>
             );
         }
         
-        // Exibe o erro de autenticação APENAS se não estiver conectado E houver um erro
+        // Exibe o erro de autenticação APENAS se não estiver conectado
         if (error && currentStatus !== 'connected') {
             return (
                 <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
