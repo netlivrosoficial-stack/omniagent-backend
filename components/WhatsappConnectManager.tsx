@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/src/integrations/supabase/client';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
 const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-connect`;
