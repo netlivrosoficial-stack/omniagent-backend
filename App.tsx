@@ -8,7 +8,6 @@ import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
 import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
-import AuthGate from './components/AuthGate'; // Importando AuthGate
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
@@ -41,14 +40,6 @@ const App: React.FC = () => {
         }
         // Ensure apiKey exists
         if (!parsed.apiKey) parsed.apiKey = '';
-        // Ensure metaApi exists
-        if (!parsed.metaApi) {
-            parsed.metaApi = {
-                verifyToken: '',
-                phoneNumberId: '',
-                accessToken: '',
-            };
-        }
         return parsed;
       }
     } catch (e) {
@@ -58,11 +49,6 @@ const App: React.FC = () => {
       name: 'OmniAgent',
       personality: 'Professional',
       apiKey: '', // Chave de API padrão vazia
-      metaApi: {
-        verifyToken: '',
-        phoneNumberId: '',
-        accessToken: '',
-      },
       modules: {
         sales: true,
         support: true,
@@ -127,16 +113,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <AuthGate>
-      <div className="flex bg-slate-900 text-slate-200">
-        <Sidebar currentView={currentView} onChangeView={setCurrentView} />
-        <main className="flex-1 ml-20 lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">
-          <div className="w-full max-w-7xl mx-auto">
-            {renderView()}
-          </div>
-        </main>
-      </div>
-    </AuthGate>
+    <div className="flex bg-slate-900 text-slate-200">
+      <Sidebar currentView={currentView} onChangeView={setCurrentView} />
+      <main className="flex-1 ml-20 lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">
+        <div className="w-full max-w-7xl mx-auto">
+           {renderView()}
+        </div>
+      </main>
+    </div>
   );
 };
 

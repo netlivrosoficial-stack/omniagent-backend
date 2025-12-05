@@ -1,8 +1,7 @@
 import React from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
 import WhatsappTestButton from './WhatsappTestButton';
-import WhatsappConnectManager from './WhatsappConnectManager'; 
-import WhatsappCloudConfig from './WhatsappCloudConfig'; // Importando o novo componente
+import WhatsappConnectManager from './WhatsappConnectManager'; // Importando o novo componente
 import { AgentConfig } from '../types';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
@@ -18,7 +17,6 @@ interface ChannelConfigModalProps {
   // Novo prop para atualizar o estado de conexão no ChannelsPanel
   onUpdateConnection: (channelId: keyof AgentConfig['channels'], status: boolean) => void; 
   channelId: keyof AgentConfig['channels']; // Novo prop para identificar o canal
-  setConfig: React.Dispatch<React.SetStateAction<AgentConfig>>; // Adicionando setConfig
 }
 
 const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ 
@@ -29,46 +27,12 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
     agentName, 
     agentConfig,
     onUpdateConnection,
-    channelId,
-    setConfig
+    channelId
 }) => {
   if (!isOpen) return null;
   
   const handleStatusUpdate = (status: boolean) => {
       onUpdateConnection(channelId, status);
-  }
-
-  const renderChannelSpecificConfig = () => {
-      if (channelId === 'whatsapp') {
-          return (
-              <>
-                  <WhatsappConnectManager 
-                      isConnected={isConnected} 
-                      onUpdateStatus={handleStatusUpdate}
-                  />
-                  {isConnected && <WhatsappTestButton agentName={agentName} agentConfig={agentConfig} />}
-              </>
-          );
-      }
-      
-      if (channelId === 'whatsappCloud') {
-          return (
-              <>
-                  <WhatsappCloudConfig 
-                      config={agentConfig} 
-                      setConfig={setConfig} 
-                      onUpdateStatus={handleStatusUpdate}
-                  />
-                  {isConnected && <WhatsappTestButton agentName={agentName} agentConfig={agentConfig} />}
-              </>
-          );
-      }
-      
-      return (
-          <div className="text-center p-10 bg-slate-900 rounded-lg border border-slate-700">
-              <p className="text-slate-400">Configuração para {channelName} em desenvolvimento.</p>
-          </div>
-      );
   }
 
   return (
@@ -95,7 +59,16 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
             </p>
           </div>
 
-          {renderChannelSpecificConfig()}
+          {channelId === 'whatsapp' && (
+            <>
+                <WhatsappConnectManager 
+                    isConnected={isConnected} 
+                    onUpdateStatus={handleStatusUpdate}
+                />
+                
+                {isConnected && <WhatsappTestButton agentName={agentName} agentConfig={agentConfig} />}
+            </>
+          )}
           
           <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
             <h3 className="text-lg font-semibold text-white">Webhook URL</h3>

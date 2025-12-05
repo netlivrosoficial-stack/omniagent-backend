@@ -150,7 +150,6 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
               agentName={config.name}
               agentConfig={config}
               onUpdateConnection={handleUpdateConnection} // Passando o callback
-              setConfig={setConfig} // Passando setConfig
           />
       )}
     </div>
