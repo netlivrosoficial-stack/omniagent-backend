@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { GoogleGenAI, Type } from "https://esm.sh/@google/genai@1.31.0"
+import { GoogleGenAI, Type, FunctionDeclaration, Part } from "https://esm.sh/@google/genai@1.31.0"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 // Configuração de CORS para permitir chamadas do frontend
 const corsHeaders = {
@@ -7,8 +8,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Definições de Ferramentas (Tools) - Replicadas do GeminiService do frontend
-const toolsDef = [
+// Inicializa o cliente Supabase
+const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+);
+
+// Definições de Ferramentas (Tools)
+const toolsDef: FunctionDeclaration[] = [
   {
     name: "save_lead",
     description: "Salva um novo lead no banco de dados quando um usuário demonstra interesse ou fornece informações de contato.",
@@ -61,13 +68,52 @@ const toolsDef = [
   }
 ];
 
+// Função para executar a chamada de ferramenta
+async function handleToolCall(name: string, args: any): Promise<string> {
+    switch (name) {
+        case 'save_lead':
+            const { name: leadName, phone, origin, interestLevel } = args;
+            
+            const { data, error } = await supabase
+                .from('leads')
+                .insert([{ 
+                    name: leadName, 
+                    phone: phone, 
+                    origin: origin || 'whatsapp', 
+                    interest_level: interestLevel || 'Médio' 
+                }])
+                .select();
+
+            if (error) {
+                console.error("Supabase Error (save_lead):", error);
+                return `Erro ao salvar lead: ${error.message}`;
+            }
+            
+            return `Lead salvo com sucesso. ID: ${data[0].id}`;
+
+        case 'create_ticket':
+            // Lógica de simulação para criação de ticket
+            return `Ticket de suporte criado com sucesso na categoria ${args.category}.`;
+            
+        case 'check_stock':
+            // Lógica de simulação para checagem de estoque
+            return `O produto ${args.productName} está em estoque.`;
+            
+        case 'send_file':
+            // Lógica de simulação para envio de arquivo
+            return `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
+
+        default:
+            return `Ferramenta desconhecida: ${name}`;
+    }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
   
   try {
-    // O payload agora inclui a mensagem, o remetente e a configuração do agente
     const { message, sender, agentConfig } = await req.json();
     
     if (!agentConfig) {
@@ -92,7 +138,7 @@ serve(async (req) => {
         finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${knowledgeBase}`;
     }
 
-    // 1. Chamar o Gemini
+    // 1. Iniciar o chat com a configuração do agente
     const chat = ai.chats.create({
         model: "gemini-2.5-flash",
         config: {
@@ -100,19 +146,50 @@ serve(async (req) => {
           temperature: 0.7,
           tools: [{ functionDeclarations: toolsDef }],
         },
-        // Em um cenário real, o histórico de conversas seria carregado do banco de dados
         history: [] 
     });
 
-    const result = await chat.sendMessage({ message });
+    let currentMessage: Part = { text: message };
+    let aiResponseText = "";
+    let toolCallsExecuted = false;
     
-    let aiResponseText = result.text || "O agente processou a mensagem, mas não gerou uma resposta de texto.";
-    
-    // 2. Retornar a resposta do Gemini
+    // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
+    for (let i = 0; i < 5; i++) {
+        const result = await chat.sendMessage({ message: currentMessage });
+        
+        if (result.functionCalls && result.functionCalls.length > 0) {
+            toolCallsExecuted = true;
+            const toolResponses: Part[] = [];
+            
+            for (const fc of result.functionCalls) {
+                const toolResult = await handleToolCall(fc.name, fc.call.args);
+                
+                toolResponses.push({
+                    functionResponse: {
+                        name: fc.name,
+                        response: {
+                            content: toolResult,
+                        },
+                    },
+                });
+            }
+            
+            // Enviar os resultados das ferramentas de volta ao Gemini
+            currentMessage = { functionResponses: toolResponses };
+            
+        } else {
+            // O Gemini respondeu com texto final
+            aiResponseText = result.text || "O agente processou a mensagem, mas não gerou uma resposta de texto.";
+            break;
+        }
+    }
+
+    // 2. Retornar a resposta final
     return new Response(
       JSON.stringify({ 
         status: 'success', 
         response: aiResponseText,
+        toolCallsExecuted: toolCallsExecuted,
         processedBy: 'OmniAgent Edge Function (Gemini)'
       }),
       {
