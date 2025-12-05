@@ -8,8 +8,8 @@ import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
 import LeadsPanel from './components/LeadsPanel';
-import Login from './src/pages/Login'; // Importando a página de Login
-import SessionProvider, { useAuth } from './src/components/SessionProvider'; // Importando o SessionProvider e useAuth
+import Login from '@/src/pages/Login'; // Importando a página de Login
+import SessionProvider, { useAuth } from '@/src/components/SessionProvider'; // Importando o SessionProvider e useAuth
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
