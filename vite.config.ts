@@ -13,6 +13,11 @@ export default defineConfig(({ mode }) => {
       optimizeDeps: {
         exclude: ['react', 'react-dom'],
       },
+      build: {
+        rollupOptions: {
+          external: ['react', 'react-dom', 'react-dom/client'],
+        },
+      },
       define: {
         // Removendo a injeção da chave de API do Gemini, pois ela será gerenciada pelo estado do React.
       },
