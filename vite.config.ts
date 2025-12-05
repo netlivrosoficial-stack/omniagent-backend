@@ -9,7 +9,12 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [react()],
+      plugins: [
+        react({
+          // Força o uso do runtime automático, que é compatível com o React 19
+          jsxRuntime: 'automatic' 
+        })
+      ],
       optimizeDeps: {
         exclude: ['react', 'react-dom'],
       },
