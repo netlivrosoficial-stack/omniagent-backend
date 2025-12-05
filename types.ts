@@ -19,17 +19,10 @@ export interface TrainingItem {
   source?: string;
 }
 
-export interface MetaApiConfig {
-  verifyToken: string;
-  phoneNumberId: string;
-  accessToken: string;
-}
-
 export interface AgentConfig {
   name: string;
   personality: string;
   apiKey: string; // Novo campo para a chave de API
-  metaApi: MetaApiConfig; // Configuração da Meta Cloud API
   modules: {
     sales: boolean;
     support: boolean;

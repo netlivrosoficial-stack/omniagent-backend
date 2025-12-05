@@ -108,42 +108,24 @@ async function handleToolCall(name: string, args: any): Promise<string> {
     }
 }
 
-// Função de simulação para enviar a resposta de volta via Meta API
-function simulateMetaApiSend(accessToken: string, phoneNumberId: string, recipient: string, message: string): string {
-    if (!accessToken || !phoneNumberId) {
-        return "ERRO: Credenciais da Meta API ausentes. Não foi possível enviar a resposta de volta.";
-    }
-    // Em um ambiente real, faríamos um fetch para:
-    // `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`
-    // com o accessToken no header.
-    
-    // Aqui, apenas confirmamos que a função foi chamada com sucesso.
-    console.log(`Simulação de envio via Meta API para ${recipient}. Usando Phone ID: ${phoneNumberId}`);
-    return `(Simulação Meta API: Mensagem enviada de volta ao usuário.)`;
-}
-
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
   
   try {
-    // O payload de teste do frontend inclui: message, sender, agentConfig
     const { message, sender, agentConfig } = await req.json();
     
     if (!agentConfig) {
         throw new Error("Agent configuration is missing in the request body.");
     }
 
-    // Prioriza a chave de API enviada pelo frontend (para simulação)
-    const API_KEY = agentConfig.apiKey || Deno.env.get("GEMINI_API_KEY");
-    
-    if (!API_KEY) {
-        throw new Error("GEMINI_API_KEY is not set in agent config or environment variables.");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY environment variable is not set.");
     }
 
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     
     let finalSystemInstruction = agentConfig.systemInstruction;
     
@@ -171,8 +153,8 @@ serve(async (req) => {
     let toolCallsExecuted = false;
     let result;
     
-    // Primeira chamada: Envia a mensagem de texto usando o formato Parts
-    result = await chat.sendMessage({ parts: [{ text: message }] });
+    // Primeira chamada: Envia a mensagem de texto
+    result = await chat.sendMessage({ message: message });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
@@ -203,21 +185,12 @@ serve(async (req) => {
             break;
         }
     }
-    
-    // 3. SIMULAÇÃO DE ENVIO DE RESPOSTA DE VOLTA (Cloud API)
-    const metaApiResult = simulateMetaApiSend(
-        agentConfig.metaApi.accessToken,
-        agentConfig.metaApi.phoneNumberId,
-        sender, // O remetente da mensagem (o número do cliente)
-        aiResponseText
-    );
-    
-    // 4. Retornar a resposta final (incluindo o resultado da simulação de envio)
+
+    // 2. Retornar a resposta final
     return new Response(
       JSON.stringify({ 
         status: 'success', 
         response: aiResponseText,
-        metaApiStatus: metaApiResult, // Adicionando o status da simulação de envio
         toolCallsExecuted: toolCallsExecuted,
         processedBy: 'OmniAgent Edge Function (Gemini)'
       }),

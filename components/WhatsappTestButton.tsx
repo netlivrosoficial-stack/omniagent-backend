@@ -14,13 +14,11 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [responseMessage, setResponseMessage] = useState('');
-    const [metaApiStatus, setMetaApiStatus] = useState<string | null>(null);
     
     const handleTest = async () => {
         setIsLoading(true);
         setStatus('idle');
         setResponseMessage('');
-        setMetaApiStatus(null);
         
         // Mensagem de teste alterada para forçar o uso da ferramenta save_lead
         const testPayload = {
@@ -44,8 +42,7 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
             if (response.ok) {
                 setStatus('success');
                 // Exibe a resposta completa para ver se a ferramenta foi chamada
-                setResponseMessage(data.response);
-                setMetaApiStatus(data.metaApiStatus);
+                setResponseMessage(`Resposta do Agente:\n${data.response}\n\nDetalhes da Edge Function:\nTool Calls Executadas: ${data.toolCallsExecuted ? 'Sim' : 'Não'}\nProcessado por: ${data.processedBy}`);
             } else {
                 setStatus('error');
                 setResponseMessage(data.error || 'Erro desconhecido ao testar o webhook.');
@@ -62,9 +59,9 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
 
     return (
         <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4">
-            <h3 className="text-lg font-semibold text-white">Teste de Conexão Real (Cloud API)</h3>
+            <h3 className="text-lg font-semibold text-white">Teste de Conexão Real</h3>
             <p className="text-slate-400 text-sm">
-                Envia uma mensagem de teste para a Edge Function, forçando a execução do agente e o salvamento de um lead.
+                Envie uma mensagem de teste para a Edge Function do Supabase para verificar se o webhook está ativo e respondendo.
             </p>
             
             <button
@@ -82,19 +79,9 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
             
             {status !== 'idle' && (
                 <div className={`p-3 rounded-lg text-sm ${status === 'success' ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>
-                    <div className="flex items-start space-x-3">
+                    <div className="flex items-start space-x-2">
                         {status === 'success' ? <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" /> : <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />}
-                        <div className="space-y-2">
-                            <p className="font-semibold">Resposta do Agente:</p>
-                            <p className="whitespace-pre-wrap text-slate-300">{responseMessage}</p>
-                            
-                            {metaApiStatus && (
-                                <div className="pt-2 border-t border-slate-700 mt-2">
-                                    <p className="font-semibold">Status da Meta API:</p>
-                                    <p className={`whitespace-pre-wrap ${metaApiStatus.startsWith('ERRO') ? 'text-red-400' : 'text-amber-400'}`}>{metaApiStatus}</p>
-                                </div>
-                            )}
-                        </div>
+                        <p className="whitespace-pre-wrap">{responseMessage}</p>
                     </div>
                 </div>
             )}

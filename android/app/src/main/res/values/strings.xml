@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">APP AGENTE DE ATENDIMENTO IA WHATSAAPP</string>
-    <string name="title_activity_main">APP AGENTE DE ATENDIMENTO IA WHATSAAPP</string>
-    <string name="package_name">com.example.appagentedeatendimentoiawhatsaapp</string>
-    <string name="custom_url_scheme">com.example.appagentedeatendimentoiawhatsaapp</string>
-</resources>
