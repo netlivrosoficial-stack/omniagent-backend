@@ -8,11 +8,11 @@ import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
 import LeadsPanel from './components/LeadsPanel';
-import Login from './src/pages/Login'; // Caminho corrigido para './src/pages/Login'
+import Login from './src/pages/Login';
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
-import { supabase } from './integrations/supabase/client';
+import { supabase } from './src/integrations/supabase/client'; // Caminho corrigido
 import { Session } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
