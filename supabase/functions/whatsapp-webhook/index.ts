@@ -159,6 +159,11 @@ serve(async (req) => {
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
         
+        if (!result) {
+            aiResponseText = "Erro: Resposta vazia do modelo.";
+            break;
+        }
+        
         if (result.functionCalls && result.functionCalls.length > 0) {
             toolCallsExecuted = true;
             const toolResponses: Part[] = [];
