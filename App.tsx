@@ -7,13 +7,29 @@ import Exporter from './components/Exporter';
 import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
-import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
+import LeadsPanel from './components/LeadsPanel';
+import Login from './src/pages/Login';
+import { SessionContextProvider, useAuth } from './components/SessionContextProvider';
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
 
-const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+// Componente principal que contém a lógica de roteamento e estado
+const MainAppContent: React.FC = () => {
+  const { user } = useAuth();
+  
+  // Define a view inicial: LOGIN se não houver usuário, DASHBOARD caso contrário.
+  const initialView = user ? AppView.DASHBOARD : AppView.LOGIN;
+  const [currentView, setCurrentView] = useState<AppView>(initialView);
+  
+  // Redireciona se o estado de autenticação mudar
+  useEffect(() => {
+      if (user && currentView === AppView.LOGIN) {
+          setCurrentView(AppView.DASHBOARD);
+      } else if (!user && currentView !== AppView.LOGIN) {
+          setCurrentView(AppView.LOGIN);
+      }
+  }, [user, currentView]);
   
   const [config, setConfig] = useState<AgentConfig>(() => {
     try {
@@ -89,13 +105,17 @@ const App: React.FC = () => {
 
   
   const renderView = () => {
+    if (!user) {
+        return <Login />;
+    }
+    
     switch (currentView) {
       case AppView.DASHBOARD:
         return <Dashboard />;
       case AppView.SIMULATOR:
         if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
         return <Simulator config={config} geminiService={geminiService} />;
-      case AppView.LEADS: // Novo caso
+      case AppView.LEADS:
         return <LeadsPanel />;
       case AppView.CONFIGURATION:
         return <ConfigPanel config={config} setConfig={setConfig} />;
@@ -107,6 +127,9 @@ const App: React.FC = () => {
         return <IntegrationsPanel config={config} setConfig={setConfig} />;
       case AppView.EXPORTER:
         return <Exporter config={config} />;
+      case AppView.LOGIN:
+        // Se o usuário estiver logado, mas a view for LOGIN, redirecionamos para DASHBOARD
+        return <Dashboard />;
       default:
         return <Dashboard />;
     }
@@ -114,8 +137,8 @@ const App: React.FC = () => {
 
   return (
     <div className="flex bg-slate-900 text-slate-200">
-      <Sidebar currentView={currentView} onChangeView={setCurrentView} />
-      <main className="flex-1 ml-20 lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">
+      {user && <Sidebar currentView={currentView} onChangeView={setCurrentView} />}
+      <main className={`flex-1 ${user ? 'ml-20 lg:ml-64' : 'ml-0'} p-4 sm:p-6 lg:p-8 min-h-screen`}>
         <div className="w-full max-w-7xl mx-auto">
            {renderView()}
         </div>
@@ -123,5 +146,11 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+const App: React.FC = () => (
+    <SessionContextProvider>
+        <MainAppContent />
+    </SessionContextProvider>
+);
 
 export default App;
