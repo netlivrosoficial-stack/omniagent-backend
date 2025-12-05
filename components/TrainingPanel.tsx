@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FC } from 'react';
 import { AgentConfig, TrainingItem } from '../types';
 import { Search, Quote, FileText, Trash2, Link, Video } from 'lucide-react';
 
@@ -7,7 +7,7 @@ interface TrainingPanelProps {
   setConfig: React.Dispatch<React.SetStateAction<AgentConfig>>;
 }
 
-const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
+const TrainingPanel: FC<TrainingPanelProps> = ({ config, setConfig }) => {
   const [activeTab, setActiveTab] = useState<'text' | 'website' | 'video' | 'document'>('text');
   const [newText, setNewText] = useState('');
   const [newUrl, setNewUrl] = useState('');

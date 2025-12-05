@@ -1,10 +1,10 @@
-import React from 'react';
+import { FC } from 'react';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Bot } from 'lucide-react';
 
-const Login: React.FC = () => {
+const Login: FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
       <div className="w-full max-w-md p-8 space-y-6 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">

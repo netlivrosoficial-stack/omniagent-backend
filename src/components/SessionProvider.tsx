@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, FC } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/src/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -23,7 +23,7 @@ interface SessionProviderProps {
   children: ReactNode;
 }
 
-const SessionProvider: React.FC<SessionProviderProps> = ({ children }) => {
+const SessionProvider: FC<SessionProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);

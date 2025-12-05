@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, FC } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '@/src/integrations/supabase/client';
 import { useAuth } from '@/src/components/SessionProvider'; // Importando useAuth
@@ -17,7 +17,7 @@ interface WhatsappConnectManagerProps {
     onUpdateStatus: (status: boolean) => void;
 }
 
-const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConnected, onUpdateStatus }) => {
+const WhatsappConnectManager: FC<WhatsappConnectManagerProps> = ({ isConnected, onUpdateStatus }) => {
     const { user, isLoading: isAuthLoading } = useAuth(); // Usando useAuth
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);

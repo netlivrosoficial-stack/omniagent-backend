@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FC, Dispatch, SetStateAction } from 'react';
 import { AgentConfig } from '../types';
 import { CheckCircle2 } from 'lucide-react';
 import ChannelConfigModal from './ChannelConfigModal';
@@ -48,7 +48,7 @@ interface ChannelCardProps {
   onConfigure: () => void;
 }
 
-const ChannelCard: React.FC<ChannelCardProps> = ({ icon, title, description, connected, onToggle, onConfigure }) => (
+const ChannelCard: FC<ChannelCardProps> = ({ icon, title, description, connected, onToggle, onConfigure }) => (
   <div className="bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col justify-between relative overflow-hidden transition-all hover:border-slate-600 hover:shadow-lg">
     {connected && (
       <div className="absolute top-2 right-2 text-emerald-400 bg-emerald-900/50 p-1 rounded-full">
@@ -81,10 +81,10 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ icon, title, description, con
 
 interface ChannelsPanelProps {
   config: AgentConfig;
-  setConfig: React.Dispatch<React.SetStateAction<AgentConfig>>;
+  setConfig: Dispatch<SetStateAction<AgentConfig>>;
 }
 
-const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
+const ChannelsPanel: FC<ChannelsPanelProps> = ({ config, setConfig }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<{ id: keyof AgentConfig['channels'], title: string } | null>(null);
 

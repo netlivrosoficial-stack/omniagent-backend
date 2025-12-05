@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
 import WhatsappTestButton from './WhatsappTestButton';
 import WhatsappConnectManager from './WhatsappConnectManager'; // Importando o novo componente
@@ -19,7 +19,7 @@ interface ChannelConfigModalProps {
   channelId: keyof AgentConfig['channels']; // Novo prop para identificar o canal
 }
 
-const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ 
+const ChannelConfigModal: FC<ChannelConfigModalProps> = ({ 
     isOpen, 
     onClose, 
     channelName, 

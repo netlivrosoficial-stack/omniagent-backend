@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, FC } from 'react';
 import { Send, Bot, User, ChevronsRight } from 'lucide-react';
 import { AgentConfig, Message, ToolCallLog } from '../types';
 import { GeminiService } from '../services/geminiService';
@@ -8,7 +8,7 @@ interface SimulatorProps {
   geminiService: GeminiService;
 }
 
-const ToolCallDisplay: React.FC<{ toolCall: ToolCallLog }> = ({ toolCall }) => (
+const ToolCallDisplay: FC<{ toolCall: ToolCallLog }> = ({ toolCall }) => (
   <div className="bg-slate-700/50 rounded-lg p-3 my-2 border border-slate-600">
     <div className="flex items-center text-xs text-amber-400 font-mono">
       <ChevronsRight className="w-4 h-4 mr-2"/>
@@ -21,7 +21,7 @@ const ToolCallDisplay: React.FC<{ toolCall: ToolCallLog }> = ({ toolCall }) => (
 );
 
 
-const Simulator: React.FC<SimulatorProps> = ({ config, geminiService }) => {
+const Simulator: FC<SimulatorProps> = ({ config, geminiService }) => {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'model', content: `Olá! Eu sou ${config.name}. Como posso te ajudar hoje?`, timestamp: new Date() }
   ]);

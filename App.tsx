@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, FC } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Simulator from './components/Simulator';
@@ -15,7 +15,7 @@ import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
 
 // Componente principal que contém a lógica de navegação e estado
-const MainAppContent: React.FC = () => {
+const MainAppContent: FC = () => {
   const { session, isLoading } = useAuth();
   
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
@@ -139,7 +139,7 @@ const MainAppContent: React.FC = () => {
   );
 };
 
-const App: React.FC = () => (
+const App: FC = () => (
     <SessionProvider>
         <MainAppContent />
     </SessionProvider>
