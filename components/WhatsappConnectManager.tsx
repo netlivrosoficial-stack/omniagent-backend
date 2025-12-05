@@ -19,7 +19,7 @@ interface WhatsappConnectManagerProps {
 const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConnected, onUpdateStatus }) => {
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);
-    const [isAuthLoading, setIsAuthLoading] = useState(true); // Novo estado
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
 
@@ -168,16 +168,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             );
         }
         
-        // Exibe o erro de autenticação APENAS se não estiver conectado
-        if (error && currentStatus !== 'connected') {
-            return (
-                <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-3" />
-                    Erro: {error}
-                </div>
-            );
-        }
-
+        // Se estiver conectado, NUNCA mostramos o erro de autenticação.
         if (currentStatus === 'connected') {
             return (
                 <div className="text-center py-4">
@@ -192,6 +183,26 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                         <LogOut className="w-4 h-4" />
                         <span>Desconectar</span>
                     </button>
+                </div>
+            );
+        }
+        
+        // Se houver um erro E não estiver conectado, mostramos o erro.
+        if (error) {
+            return (
+                <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-3" />
+                    Erro: {error}
+                </div>
+            );
+        }
+        
+        // Se estiver carregando e não tivermos dados de sessão, mostramos o spinner
+        if (loading && !session) {
+            return (
+                <div className="flex justify-center items-center py-10 text-blue-400">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                    Carregando status da sessão...
                 </div>
             );
         }
