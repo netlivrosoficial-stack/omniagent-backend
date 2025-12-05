@@ -114,15 +114,10 @@ serve(async (req) => {
   }
   
   try {
-    // Tenta ler o corpo da requisição
-    const body = await req.json();
-    const { message, sender, agentConfig } = body;
+    const { message, sender, agentConfig } = await req.json();
     
     if (!agentConfig) {
         throw new Error("Agent configuration is missing in the request body.");
-    }
-    if (!message) {
-        throw new Error("Message content is missing in the request body.");
     }
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -207,9 +202,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Erro na Edge Function:", error);
-    // Retorna o erro de forma mais genérica para o frontend
     return new Response(
-      JSON.stringify({ error: `Erro interno da Edge Function: ${error.message}` }),
+      JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
