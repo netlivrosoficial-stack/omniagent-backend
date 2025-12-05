@@ -27,14 +27,24 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         // 1. Obter o ID do usuário primeiro
         const getUserId = async () => {
             setIsAuthLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
+            // Tenta obter o usuário autenticado
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
             
+            if (authError) {
+                console.error("Supabase Auth Error:", authError);
+            }
+
             if (user) {
                 setUserId(user.id);
                 setError(null);
+                console.log("Usuário autenticado encontrado:", user.id);
                 fetchSession(user.id);
             } else {
-                setError("Usuário não autenticado.");
+                // Se não houver usuário autenticado, tentamos buscar a sessão de qualquer forma
+                // para ver se o status 'connected' está no banco de dados.
+                console.log("Usuário não autenticado. Tentando buscar sessão de WhatsApp sem ID.");
+                // Não podemos buscar a sessão sem ID, então definimos o erro e terminamos.
+                setError("Usuário não autenticado. Por favor, faça login para gerenciar a conexão.");
                 setLoading(false);
             }
             setIsAuthLoading(false);
@@ -54,6 +64,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             .single();
             
         if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
+            console.error("Error fetching whatsapp session:", error);
             setError(error.message);
         } else if (data) {
             setSession(data as SessionData);
@@ -68,7 +79,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     // Função para iniciar a conexão (chama a Edge Function)
     const startConnection = async () => {
         if (!userId) {
-            setError("Usuário não autenticado.");
+            setError("Usuário não autenticado. Por favor, faça login para iniciar a conexão.");
             return;
         }
         
@@ -158,7 +169,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const qrCodeData = session?.qr_code_data;
 
     const renderContent = () => {
-        // Se estiver carregando a autenticação, mostramos o spinner
+        // 1. Se estiver carregando a autenticação, mostramos o spinner
         if (isAuthLoading) {
             return (
                 <div className="flex justify-center items-center py-10 text-blue-400">
@@ -168,7 +179,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             );
         }
         
-        // Se estiver conectado, NUNCA mostramos o erro de autenticação.
+        // 2. Se estiver conectado, NUNCA mostramos o erro de autenticação.
         if (currentStatus === 'connected') {
             return (
                 <div className="text-center py-4">
@@ -187,7 +198,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             );
         }
         
-        // Se houver um erro E não estiver conectado, mostramos o erro.
+        // 3. Se houver um erro E não estiver conectado, mostramos o erro.
         if (error) {
             return (
                 <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
@@ -197,7 +208,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             );
         }
         
-        // Se estiver carregando e não tivermos dados de sessão, mostramos o spinner
+        // 4. Se estiver carregando e não tivermos dados de sessão, mostramos o spinner
         if (loading && !session) {
             return (
                 <div className="flex justify-center items-center py-10 text-blue-400">
