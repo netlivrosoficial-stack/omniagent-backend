@@ -102,12 +102,18 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     
     // Função para simular a mudança de status para 'connected'
     const simulateConnectionSuccess = async (token: string) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            console.error("Simulação de conexão falhou: Usuário não autenticado.");
+            return;
+        }
+        
         // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
         // Aqui, atualizamos o Supabase diretamente para simular o sucesso
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'connected' })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id))
+            .eq('user_id', user.id)
             .select()
             .single();
             
@@ -122,10 +128,17 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     
     const disconnect = async () => {
         setLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            setError("Usuário não autenticado.");
+            setLoading(false);
+            return;
+        }
+        
         const { error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'disconnected', qr_code_data: null })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id));
+            .eq('user_id', user.id);
             
         if (error) {
             setError("Falha ao desconectar.");
