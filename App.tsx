@@ -69,17 +69,20 @@ const App: React.FC = () => {
     };
   });
 
-  // FIX: GeminiService is now initialized without an API key, as it uses process.env.API_KEY internally.
+  // Inicializa o serviço Gemini. Se a chave estiver faltando, ele será null.
   const geminiService = useMemo(() => {
-    return new GeminiService();
+    try {
+        return new GeminiService();
+    } catch (e) {
+        console.error("Failed to initialize Gemini Service:", e);
+        return null;
+    }
   }, []);
   
   useEffect(() => {
     localStorage.setItem('agent-config', JSON.stringify(config));
   }, [config]);
 
-  // FIX: All API key state management and the initial API key screen have been removed
-  // to comply with the guideline of using process.env.API_KEY exclusively.
   
   const renderView = () => {
     switch (currentView) {

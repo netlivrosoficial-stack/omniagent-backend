@@ -56,12 +56,16 @@ const toolsDef: FunctionDeclaration[] = [
 ];
 
 export class GeminiService {
-  private ai: GoogleGenAI;
+  private ai: GoogleGenAI | null = null;
   private modelName = "gemini-2.5-flash";
+  private apiKey: string | undefined;
 
-  // FIX: Constructor now uses process.env.API_KEY as per the guidelines.
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Captura a chave de API injetada pelo Vite
+    this.apiKey = process.env.API_KEY;
+    if (this.apiKey) {
+        this.ai = new GoogleGenAI({ apiKey: this.apiKey });
+    }
   }
 
   async sendMessage(
@@ -70,6 +74,10 @@ export class GeminiService {
     config: AgentConfig,
     onToolCall: (name: string, args: any) => void
   ) {
+    if (!this.ai) {
+        throw new Error("GEMINI_API_KEY não está configurada. Por favor, defina a chave de API.");
+    }
+    
     try {
       let finalSystemInstruction = config.systemInstruction;
       
@@ -96,17 +104,12 @@ export class GeminiService {
       const responseText = result.text || "";
       let toolCallsData: any[] = [];
 
-      // FIX: Use the recommended `result.functionCalls` to handle tool calls, instead of parsing candidates.
       if (result.functionCalls) {
         for (const fc of result.functionCalls) {
            onToolCall(fc.name, fc.args);
            toolCallsData.push({ name: fc.name, args: fc.args });
         }
       }
-
-      // If the model stopped solely for a function call and didn't generate text, 
-      // we might want to generate a follow-up or just return the tool log.
-      // However, usually 2.5 flash is good at generating text + tool calls or just tool calls.
       
       return {
         text: responseText,
