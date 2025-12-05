@@ -175,7 +175,7 @@ serve(async (req) => {
                     functionResponse: {
                         name: fc.name,
                         response: {
-                            content: toolResult,
+                            result: toolResult, // CORRIGIDO: Usando 'result' em vez de 'content'
                         },
                     },
                 });
