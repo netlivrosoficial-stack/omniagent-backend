@@ -40,6 +40,14 @@ const App: React.FC = () => {
         }
         // Ensure apiKey exists
         if (!parsed.apiKey) parsed.apiKey = '';
+        // Ensure metaApi exists
+        if (!parsed.metaApi) {
+            parsed.metaApi = {
+                verifyToken: '',
+                phoneNumberId: '',
+                accessToken: '',
+            };
+        }
         return parsed;
       }
     } catch (e) {
@@ -49,6 +57,11 @@ const App: React.FC = () => {
       name: 'OmniAgent',
       personality: 'Professional',
       apiKey: '', // Chave de API padrão vazia
+      metaApi: {
+        verifyToken: '',
+        phoneNumberId: '',
+        accessToken: '',
+      },
       modules: {
         sales: true,
         support: true,
