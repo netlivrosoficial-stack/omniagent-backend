@@ -9,7 +9,7 @@ import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
 import LeadsPanel from './components/LeadsPanel';
 import Login from './src/pages/Login';
-import { SessionContextProvider, useAuth } from './src/components/SessionContextProvider';
+import { SessionContextProvider, useAuth } from './src/SessionContextProvider';
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
