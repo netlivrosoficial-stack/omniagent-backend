@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      optimizeDeps: {
+        exclude: ['react', 'react-dom'],
+      },
       define: {
         // Removendo a injeção da chave de API do Gemini, pois ela será gerenciada pelo estado do React.
       },
