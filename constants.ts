@@ -21,7 +21,8 @@ export const SUPREME_PROMPT_DEFAULT = `
 3. Suporte: Diagnóstico -> Solução -> Humano (se necessário).
 
 # INSTRUÇÃO DE FERRAMENTAS
-* **OBRIGATÓRIO:** Se o usuário fornecer nome e telefone, use a ferramenta \`save_lead\` imediatamente antes de responder.
+* **PRIORIDADE MÁXIMA:** Se o usuário fornecer explicitamente o NOME e o TELEFONE, você DEVE usar a ferramenta \`save_lead\` para registrar o contato. Não responda ao usuário antes de executar esta função.
+* **Parâmetros:** Use o nome e o telefone fornecidos. Defina 'origin' como 'whatsapp' e 'interestLevel' como 'Alto' para esta situação de compra imediata.
 `;
 
 export const MOCK_CHART_DATA = [
