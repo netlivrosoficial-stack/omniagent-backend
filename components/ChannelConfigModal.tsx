@@ -1,14 +1,16 @@
 import React from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
+import WhatsappTestButton from './WhatsappTestButton';
 
 interface ChannelConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
   channelName: string;
   isConnected: boolean;
+  agentName: string; // Added agentName prop
 }
 
-const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose, channelName, isConnected }) => {
+const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose, channelName, isConnected, agentName }) => {
   if (!isOpen) return null;
 
   return (
@@ -36,29 +38,34 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose
           </div>
 
           {channelName === 'Whatsapp' && isConnected && (
-            <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4">
-                <h3 className="text-lg font-semibold text-white flex items-center">
-                    <QrCode className="w-5 h-5 mr-2 text-blue-400" />
-                    Conexão (Simulada)
-                </h3>
-                <p className="text-slate-400 text-sm">
-                    Para testar o agente em tempo real, escaneie o QR Code abaixo com seu celular.
-                    <br/>
-                    <span className="text-xs text-amber-400 mt-1 block">Atenção: Esta é uma simulação visual. Em um ambiente real, um QR Code de sessão seria gerado aqui.</span>
-                </p>
-                
-                {/* Placeholder for QR Code */}
-                <div className="w-32 h-32 bg-slate-700 mx-auto flex items-center justify-center rounded-md">
-                    <span className="text-xs text-slate-400">QR Code Placeholder</span>
+            <>
+                <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center">
+                        <QrCode className="w-5 h-5 mr-2 text-blue-400" />
+                        Conexão (Simulada)
+                    </h3>
+                    <p className="text-slate-400 text-sm">
+                        Para testar o agente em tempo real, escaneie o QR Code abaixo com seu celular.
+                        <br/>
+                        <span className="text-xs text-amber-400 mt-1 block">Atenção: Esta é uma simulação visual. Em um ambiente real, um QR Code de sessão seria gerado aqui.</span>
+                    </p>
+                    
+                    {/* Placeholder for QR Code */}
+                    <div className="w-32 h-32 bg-slate-700 mx-auto flex items-center justify-center rounded-md">
+                        <span className="text-xs text-slate-400">QR Code Placeholder</span>
+                    </div>
                 </div>
-            </div>
+                
+                <WhatsappTestButton agentName={agentName} />
+            </>
           )}
           
           <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
             <h3 className="text-lg font-semibold text-white">Webhook URL</h3>
             <p className="text-sm text-slate-300 font-mono mt-2 break-all">
-                https://api.omniagent.com/webhook/{channelName.toLowerCase()}/agent-id-12345
+                {EDGE_FUNCTION_URL}
             </p>
+            <p className="text-xs text-slate-500 mt-1">Este é o endpoint real da sua Edge Function no Supabase.</p>
           </div>
         </div>
 
