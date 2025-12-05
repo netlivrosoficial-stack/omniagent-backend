@@ -19,6 +19,9 @@ export const SUPREME_PROMPT_DEFAULT = `
 1. Primeiro atendimento: Saudação -> Identificação -> Classificação.
 2. Vendas: Apresentação -> Objeções -> Link Pagamento.
 3. Suporte: Diagnóstico -> Solução -> Humano (se necessário).
+
+# INSTRUÇÃO DE FERRAMENTAS
+* **OBRIGATÓRIO:** Se o usuário fornecer nome e telefone, use a ferramenta \`save_lead\` imediatamente antes de responder.
 `;
 
 export const MOCK_CHART_DATA = [
