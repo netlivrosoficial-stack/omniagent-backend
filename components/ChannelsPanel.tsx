@@ -111,8 +111,8 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
 
   const channelData = [
     { id: 'telegram', icon: <TelegramIcon />, title: 'Telegram', description: 'Responder via Telegram' },
-    { id: 'whatsappCloud', icon: <CloudApiIcon />, title: 'Cloud API', description: 'Responder via Whatsapp Oficial' },
-    { id: 'whatsapp', icon: <WhatsAppIcon />, title: 'Whatsapp', description: 'Responder via Whatsapp' },
+    { id: 'whatsappCloud', icon: <CloudApiIcon />, title: 'Cloud API (Meta)', description: 'Solução oficial do Meta. Paga por conversa.' },
+    { id: 'whatsapp', icon: <WhatsAppIcon />, title: 'Whatsapp (QR Code)', description: 'Solução de código aberto (Baileys/Venom). Gratuita por mensagem.' },
     { id: 'messenger', icon: <MessengerIcon />, title: 'Messenger', description: 'Responder via Messenger' },
   ];
 
@@ -150,6 +150,7 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
               agentName={config.name}
               agentConfig={config}
               onUpdateConnection={handleUpdateConnection} // Passando o callback
+              setConfig={setConfig} // Passando setConfig
           />
       )}
     </div>

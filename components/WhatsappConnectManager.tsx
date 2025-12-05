@@ -224,7 +224,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     };
 
     return (
-        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-4">
+            <div className="p-3 bg-amber-900/30 text-amber-400 rounded-lg text-sm flex items-start space-x-3">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <p>
+                    **Aviso:** Esta arquitetura de QR Code é gratuita por mensagem, mas requer um servidor de longa duração (não Edge Function) para manter a sessão ativa. A função aqui é apenas para simulação e gerenciamento de estado.
+                </p>
+            </div>
             {renderContent()}
         </div>
     );

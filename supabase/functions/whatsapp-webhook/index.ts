@@ -108,12 +108,28 @@ async function handleToolCall(name: string, args: any): Promise<string> {
     }
 }
 
+// Função de simulação para enviar a resposta de volta via Meta API
+function simulateMetaApiSend(accessToken: string, phoneNumberId: string, recipient: string, message: string): string {
+    if (!accessToken || !phoneNumberId) {
+        return "ERRO: Credenciais da Meta API ausentes. Não foi possível enviar a resposta de volta.";
+    }
+    // Em um ambiente real, faríamos um fetch para:
+    // `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`
+    // com o accessToken no header.
+    
+    // Aqui, apenas confirmamos que a função foi chamada com sucesso.
+    console.log(`Simulação de envio via Meta API para ${recipient}. Usando Phone ID: ${phoneNumberId}`);
+    return `(Simulação Meta API: Mensagem enviada de volta ao usuário.)`;
+}
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
   
   try {
+    // O payload de teste do frontend inclui: message, sender, agentConfig
     const { message, sender, agentConfig } = await req.json();
     
     if (!agentConfig) {
@@ -185,12 +201,21 @@ serve(async (req) => {
             break;
         }
     }
-
-    // 2. Retornar a resposta final
+    
+    // 3. SIMULAÇÃO DE ENVIO DE RESPOSTA DE VOLTA (Cloud API)
+    const metaApiResult = simulateMetaApiSend(
+        agentConfig.metaApi.accessToken,
+        agentConfig.metaApi.phoneNumberId,
+        sender, // O remetente da mensagem (o número do cliente)
+        aiResponseText
+    );
+    
+    // 4. Retornar a resposta final (incluindo o resultado da simulação de envio)
     return new Response(
       JSON.stringify({ 
         status: 'success', 
         response: aiResponseText,
+        metaApiStatus: metaApiResult, // Adicionando o status da simulação de envio
         toolCallsExecuted: toolCallsExecuted,
         processedBy: 'OmniAgent Edge Function (Gemini)'
       }),
