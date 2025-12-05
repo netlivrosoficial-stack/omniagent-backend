@@ -12,6 +12,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+
+    /* JSX Configuration for React 19 */
     "jsx": "react-jsx",
 
     /* Linting */
@@ -19,12 +21,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    
+
     /* Path Aliases */
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
