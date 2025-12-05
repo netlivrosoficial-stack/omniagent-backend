@@ -21,10 +21,10 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div 
-        className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100"
+        className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100 max-h-[90vh] flex flex-col" // Adicionado max-h-[90vh] e flex-col
         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
       >
-        <div className="p-6 border-b border-slate-700 flex justify-between items-center">
+        <div className="p-6 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-bold text-white flex items-center">
             <Settings className="w-5 h-5 mr-2 text-blue-400" />
             Configurações de {channelName}
@@ -34,7 +34,7 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1"> {/* Adicionado overflow-y-auto e flex-1 */}
           <div className={`p-4 rounded-lg flex items-center space-x-3 ${isConnected ? 'bg-emerald-900/30 border border-emerald-700' : 'bg-red-900/30 border border-red-700'}`}>
             <CheckCircle2 className={`w-6 h-6 ${isConnected ? 'text-emerald-400' : 'text-red-400'}`} />
             <p className="text-white font-medium">
@@ -74,7 +74,7 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose
           </div>
         </div>
 
-        <div className="p-4 border-t border-slate-700 flex justify-end">
+        <div className="p-4 border-t border-slate-700 flex justify-end flex-shrink-0">
           <button 
             onClick={onClose}
             className="bg-blue-600 text-white font-medium px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
