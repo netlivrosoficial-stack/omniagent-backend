@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AgentConfig } from '../types';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Save, Check } from 'lucide-react';
 import { SUPREME_PROMPT_DEFAULT } from '../constants';
 
 interface ConfigPanelProps {
@@ -9,6 +9,8 @@ interface ConfigPanelProps {
 }
 
 const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   
   const handleModuleToggle = (module: keyof AgentConfig['modules']) => {
     setConfig(prev => ({
@@ -22,7 +24,19 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
 
   const handleResetPrompt = () => {
     setConfig(prev => ({ ...prev, systemInstruction: SUPREME_PROMPT_DEFAULT }));
+    handleSave(); // Salva automaticamente após redefinir
   };
+  
+  const handleSave = () => {
+      // A lógica de salvamento real (localStorage) já está em App.tsx via useEffect.
+      // Aqui, apenas simulamos o processo e fornecemos feedback visual.
+      setIsSaving(true);
+      setTimeout(() => {
+          setIsSaving(false);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+      }, 500);
+  }
   
   const moduleTranslations: Record<keyof AgentConfig['modules'], string> = {
     sales: 'Vendas',
@@ -63,7 +77,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
           </div>
         </div>
         
-        {/* Novo campo para a Chave de API */}
+        {/* Campo para a Chave de API */}
         <div className="mb-6">
             <label className="block text-sm font-medium text-slate-400 mb-2">Chave de API do Gemini (Frontend)</label>
             <input 
@@ -110,6 +124,36 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
             rows={15}
             className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 focus:border-blue-500 outline-none font-mono"
           />
+        </div>
+        
+        {/* Botão de Salvar */}
+        <div className="mt-6 pt-4 border-t border-slate-700 flex justify-end">
+            <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-semibold text-sm transition-colors ${
+                    saved 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-slate-600'
+                }`}
+            >
+                {isSaving ? (
+                    <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Salvando...</span>
+                    </>
+                ) : saved ? (
+                    <>
+                        <Check className="w-4 h-4" />
+                        <span>Salvo!</span>
+                    </>
+                ) : (
+                    <>
+                        <Save className="w-4 h-4" />
+                        <span>Salvar Configuração</span>
+                    </>
+                )}
+            </button>
         </div>
       </div>
     </div>
