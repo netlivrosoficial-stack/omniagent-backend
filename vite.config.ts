@@ -17,6 +17,11 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      // Adicionando esta configuração para garantir que o Vite não tente pré-otimizar o React,
+      // confiando no carregamento via importmap.
+      optimizeDeps: {
+        exclude: ['react', 'react-dom'],
       }
     };
 });
