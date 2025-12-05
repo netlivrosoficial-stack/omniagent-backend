@@ -162,7 +162,8 @@ serve(async (req) => {
             const toolResponses: Part[] = [];
             
             for (const fc of result.functionCalls) {
-                const toolResult = await handleToolCall(fc.name, fc.call.args);
+                // CORREÇÃO AQUI: Usando fc.args diretamente
+                const toolResult = await handleToolCall(fc.name, fc.args);
                 
                 toolResponses.push({
                     functionResponse: {
