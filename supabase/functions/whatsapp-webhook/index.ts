@@ -149,16 +149,15 @@ serve(async (req) => {
         history: [] 
     });
 
-    // A primeira mensagem é sempre texto
-    let currentParts: Part[] = [{ text: message }];
     let aiResponseText = "";
     let toolCallsExecuted = false;
+    let result;
+    
+    // Primeira chamada: Envia a mensagem de texto
+    result = await chat.sendMessage({ message: message });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
-        
-        // Envia as partes atuais (texto ou respostas de função)
-        const result = await chat.sendMessage({ parts: currentParts });
         
         if (result.functionCalls && result.functionCalls.length > 0) {
             toolCallsExecuted = true;
@@ -177,8 +176,8 @@ serve(async (req) => {
                 });
             }
             
-            // A próxima mensagem a ser enviada são as respostas das ferramentas
-            currentParts = toolResponses;
+            // Envia as respostas das ferramentas de volta ao Gemini
+            result = await chat.sendMessage({ parts: toolResponses });
             
         } else {
             // O Gemini respondeu com texto final
