@@ -7,6 +7,7 @@ import Exporter from './components/Exporter';
 import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
+import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
@@ -87,6 +88,8 @@ const App: React.FC = () => {
       case AppView.SIMULATOR:
         if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Verifique se a API_KEY está configurada.</div>;
         return <Simulator config={config} geminiService={geminiService} />;
+      case AppView.LEADS: // Novo caso
+        return <LeadsPanel />;
       case AppView.CONFIGURATION:
         return <ConfigPanel config={config} setConfig={setConfig} />;
       case AppView.TRAINING:

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, MessageSquare, Settings, FileJson, Bot, BookOpen, Share2, Puzzle } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Settings, FileJson, Bot, BookOpen, Share2, Puzzle, Users } from 'lucide-react';
 import { AppView } from '../types';
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
   const menuItems = [
     { id: AppView.DASHBOARD, icon: LayoutDashboard, label: 'Painel' },
     { id: AppView.SIMULATOR, icon: MessageSquare, label: 'Simulador' },
+    { id: AppView.LEADS, icon: Users, label: 'Leads' }, // Novo item
     { id: AppView.CONFIGURATION, icon: Settings, label: 'Config. do Agente' },
     { id: AppView.TRAINING, icon: BookOpen, label: 'Treinamento' },
     { id: AppView.CHANNELS, icon: Share2, label: 'Canais' },
