@@ -20,26 +20,32 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null); // Armazenar o ID do usuário
 
     useEffect(() => {
-        fetchSession();
+        // 1. Obter o ID do usuário primeiro
+        const getUserId = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                setUserId(user.id);
+                fetchSession(user.id);
+            } else {
+                setError("Usuário não autenticado.");
+                setLoading(false);
+            }
+        };
+        getUserId();
     }, []);
     
     // Função para buscar o estado atual da sessão no Supabase
-    const fetchSession = async () => {
+    const fetchSession = async (id: string) => {
         setLoading(true);
         setError(null);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            setError("Usuário não autenticado.");
-            setLoading(false);
-            return;
-        }
         
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', id)
             .single();
             
         if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
@@ -56,6 +62,11 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
 
     // Função para iniciar a conexão (chama a Edge Function)
     const startConnection = async () => {
+        if (!userId) {
+            setError("Usuário não autenticado.");
+            return;
+        }
+        
         setLoading(true);
         setError(null);
         
@@ -87,7 +98,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 });
                 // Simula a conexão automática após 5 segundos para fins de demonstração
                 setTimeout(() => {
-                    simulateConnectionSuccess(authSession.access_token);
+                    simulateConnectionSuccess(userId);
                 }, 5000);
             } else {
                 setError(data.error || 'Falha ao iniciar a conexão.');
@@ -101,13 +112,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     };
     
     // Função para simular a mudança de status para 'connected'
-    const simulateConnectionSuccess = async (token: string) => {
+    const simulateConnectionSuccess = async (id: string) => {
         // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
         // Aqui, atualizamos o Supabase diretamente para simular o sucesso
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'connected' })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id))
+            .eq('user_id', id) // Usando o ID do usuário
             .select()
             .single();
             
@@ -121,11 +132,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     }
     
     const disconnect = async () => {
+        if (!userId) return;
+        
         setLoading(true);
         const { error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'disconnected', qr_code_data: null })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id));
+            .eq('user_id', userId); // Usando o ID do usuário
             
         if (error) {
             setError("Falha ao desconectar.");
@@ -196,7 +209,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                     </div>
                     <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Simulação: Conecta em 5s)</p>
                     <button 
-                        onClick={fetchSession}
+                        onClick={() => userId && fetchSession(userId)}
                         disabled={loading}
                         className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
                     >
@@ -213,7 +226,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 <p className="text-slate-400 text-sm mb-4">Inicie o processo de conexão para gerar um novo QR Code.</p>
                 <button 
                     onClick={startConnection}
-                    disabled={loading}
+                    disabled={loading || !userId}
                     className="flex items-center justify-center mx-auto space-x-2 bg-blue-600 text-white font-medium px-5 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-slate-600"
                 >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
