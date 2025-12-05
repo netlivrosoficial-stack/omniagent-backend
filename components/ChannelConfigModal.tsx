@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
 import WhatsappTestButton from './WhatsappTestButton';
+import WhatsappConnectManager from './WhatsappConnectManager'; // Importando o novo componente
 import { AgentConfig } from '../types';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
@@ -12,17 +13,33 @@ interface ChannelConfigModalProps {
   channelName: string;
   isConnected: boolean;
   agentName: string;
-  agentConfig: AgentConfig; // Novo prop
+  agentConfig: AgentConfig;
+  // Novo prop para atualizar o estado de conexão no ChannelsPanel
+  onUpdateConnection: (channelId: keyof AgentConfig['channels'], status: boolean) => void; 
+  channelId: keyof AgentConfig['channels']; // Novo prop para identificar o canal
 }
 
-const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose, channelName, isConnected, agentName, agentConfig }) => {
+const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    channelName, 
+    isConnected, 
+    agentName, 
+    agentConfig,
+    onUpdateConnection,
+    channelId
+}) => {
   if (!isOpen) return null;
+  
+  const handleStatusUpdate = (status: boolean) => {
+      onUpdateConnection(channelId, status);
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div 
-        className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100 max-h-[90vh] flex flex-col" // Adicionado max-h-[90vh] e flex-col
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+        className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg shadow-2xl transform transition-all duration-300 scale-100 max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
           <h2 className="text-xl font-bold text-white flex items-center">
@@ -34,7 +51,7 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose
           </button>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto flex-1"> {/* Adicionado overflow-y-auto e flex-1 */}
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
           <div className={`p-4 rounded-lg flex items-center space-x-3 ${isConnected ? 'bg-emerald-900/30 border border-emerald-700' : 'bg-red-900/30 border border-red-700'}`}>
             <CheckCircle2 className={`w-6 h-6 ${isConnected ? 'text-emerald-400' : 'text-red-400'}`} />
             <p className="text-white font-medium">
@@ -42,26 +59,14 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose
             </p>
           </div>
 
-          {channelName === 'Whatsapp' && isConnected && (
+          {channelId === 'whatsapp' && (
             <>
-                <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4">
-                    <h3 className="text-lg font-semibold text-white flex items-center">
-                        <QrCode className="w-5 h-5 mr-2 text-blue-400" />
-                        Conexão (Simulada)
-                    </h3>
-                    <p className="text-slate-400 text-sm">
-                        Para testar o agente em tempo real, escaneie o QR Code abaixo com seu celular.
-                        <br/>
-                        <span className="text-xs text-amber-400 mt-1 block">Atenção: Esta é uma simulação visual. Em um ambiente real, um QR Code de sessão seria gerado aqui.</span>
-                    </p>
-                    
-                    {/* Placeholder for QR Code */}
-                    <div className="w-32 h-32 bg-slate-700 mx-auto flex items-center justify-center rounded-md">
-                        <span className="text-xs text-slate-400">QR Code Placeholder</span>
-                    </div>
-                </div>
+                <WhatsappConnectManager 
+                    isConnected={isConnected} 
+                    onUpdateStatus={handleStatusUpdate}
+                />
                 
-                <WhatsappTestButton agentName={agentName} agentConfig={agentConfig} />
+                {isConnected && <WhatsappTestButton agentName={agentName} agentConfig={agentConfig} />}
             </>
           )}
           

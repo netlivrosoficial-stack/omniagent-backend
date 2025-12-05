@@ -22,7 +22,7 @@ const CloudApiIcon = () => (
 const WhatsAppIcon = () => (
   <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="24" cy="24" r="24" fill="#25D366"/>
-    <path d="M36.1,11.9c-2.7-2.7-6.4-4.2-10.1-4.2c-7.9,0-14.4,6.4-14.4,14.4c0,2.6,0.7,5.1,2,7.3l-2.1,7.7l7.9-2.1c2.1,1.2,4.5,1.8,6.8,1.8h0c7.9,0,14.4-6.4,14.4-14.4C39.6,18.3,38.2,14.6,36.1,11.9z M26,34.5h0c-2.1,0-4.2-0.6-5.9-1.7l-0.4-0.3l-4.4,1.2l1.2-4.3l-0.3-0.5c-1.2-1.9-1.9-4-1.9-6.3c0-6.6,5.3-11.9,11.9-11.9c3.2,0,6.2,1.3,8.4,3.5c2.2,2.2,3.5,5.2,3.5,8.4C37.9,29.2,32.6,34.5,26,34.5z M32.9,25.6c-0.4-0.2-2.5-1.2-2.9-1.4c-0.4-0.1-0.7-0.2-0.9,0.2c-0.3,0.4-1.1,1.4-1.3,1.6c-0.3,0.3-0.5,0.3-0.9,0.1c-0.4-0.2-1.7-0.6-3.2-2c-1.2-1.1-2-2.4-2.2-2.8c-0.2-0.4,0-0.7,0.2-0.9c0.2-0.2,0.4-0.5,0.6-0.7c0.2-0.2,0.3-0.4,0.4-0.7c0.1-0.3,0.1-0.5,0-0.7c-0.1-0.2-0.9-2.3-1.3-3.1c-0.3-0.8-0.7-0.7-0.9-0.7c-0.2,0-0.5,0-0.7,0c-0.3,0-0.7,0.1-1.1,0.5c-0.4,0.4-1.5,1.5-1.5,3.6c0,2.1,1.5,4.2,1.7,4.5c0.2,0.3,3,4.7,7.3,6.4c1,0.4,1.8,0.6,2.4,0.8c0.9,0.2,1.8,0.2,2.4-0.1c0.7-0.4,2.2-1.1,2.5-2.2C34,26.7,33.7,26.4,32.9,25.6z" fill="white"/>
+    <path d="M36.1,11.9c-2.7-2.7-6.4-4.2-10.1-4.2c-7.9,0-14.4,6.4-14.4,14.4c0,2.6,0.7,5.1,2,7.3l-2.1,7.7l7.9-2.1c2.1,1.2,4.5,1.8,6.8,1.8h0c7.9,0,14.4-6.4,14.4-14.4C39.6,18.3,38.2,14.6,36.1,11.9z M26,34.5h0c-2.1,0-4.2-0.6-5.9-1.7l-0.4-0.3l-4.4,1.2l1.2-4.3l-0.3-0.5c-1.2-1.9-1.9-4-1.9-6.3c0-6.6,5.3-11.9,11.9-11.9c3.2,0,6.2,1.3,8.4,3.5c2.2,2.2,3.5,5.2,3.5,8.4C37.9,29.2,32.6,34.5,26,34.5z M32.9,25.6c-0.4-0.2-2.5-1.2-2.9-1.4c-0.4-0.1-0.7-0.2-0.9,0.2c-0.3,0.4-1.1,1.4-1.3,1.6c-0.3,0.3-0.5,0.3-0.9,0.1c-0.4-0.2-1.7-0.6-3.2-2c-1.2-1.1-2-2.4-2.2-2.8c-0.2-0.4,0-0.7,0.2-0.9c-0.2-0.2,0.4-0.5,0.6-0.7c0.2-0.2,0.3-0.4,0.4-0.7c0.1-0.3,0.1-0.5,0-0.7c-0.1-0.2-0.9-2.3-1.3-3.1c-0.3-0.8-0.7-0.7-0.9-0.7c-0.2,0-0.5,0-0.7,0c-0.3,0-0.7,0.1-1.1,0.5c-0.4,0.4-1.5,1.5-1.5,3.6c0,2.1,1.5,4.2,1.7,4.5c0.2,0.3,3,4.7,7.3,6.4c1,0.4,1.8,0.6,2.4,0.8c0.9,0.2,1.8,0.2,2.4-0.1c0.7-0.4,2.2-1.1,2.5-2.2C34,26.7,33.7,26.4,32.9,25.6z" fill="white"/>
   </svg>
 );
 const MessengerIcon = () => (
@@ -45,7 +45,7 @@ interface ChannelCardProps {
   description: string;
   connected: boolean;
   onToggle: () => void;
-  onConfigure: () => void; // New prop for configuration
+  onConfigure: () => void;
 }
 
 const ChannelCard: React.FC<ChannelCardProps> = ({ icon, title, description, connected, onToggle, onConfigure }) => (
@@ -69,7 +69,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ icon, title, description, con
          </div>
       ) : (
         <button 
-          onClick={onToggle}
+          onClick={onConfigure} // Mudando para abrir o modal para iniciar a conexão
           className="w-full text-center text-blue-400 font-medium text-sm hover:text-white transition-colors"
         >
           Conectar
@@ -88,14 +88,15 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState<{ id: keyof AgentConfig['channels'], title: string } | null>(null);
 
-  const handleToggle = (channel: keyof AgentConfig['channels']) => {
-    setConfig(prev => ({
-      ...prev,
-      channels: {
-        ...prev.channels,
-        [channel]: !prev.channels[channel],
-      }
-    }));
+  // Função para atualizar o estado de conexão do canal (usada pelo modal)
+  const handleUpdateConnection = (channelId: keyof AgentConfig['channels'], status: boolean) => {
+      setConfig(prev => ({
+          ...prev,
+          channels: {
+              ...prev.channels,
+              [channelId]: status,
+          }
+      }));
   };
   
   const handleOpenModal = (channelId: keyof AgentConfig['channels'], channelTitle: string) => {
@@ -131,7 +132,8 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
                 title={channel.title}
                 description={channel.description}
                 connected={config.channels[channel.id as keyof AgentConfig['channels']]}
-                onToggle={() => handleToggle(channel.id as keyof AgentConfig['channels'])}
+                // Para o WhatsApp, sempre abrimos o modal para gerenciar a conexão
+                onToggle={() => handleUpdateConnection(channel.id as keyof AgentConfig['channels'], !config.channels[channel.id as keyof AgentConfig['channels']])}
                 onConfigure={() => handleOpenModal(channel.id as keyof AgentConfig['channels'], channel.title)}
              />
           ))}
@@ -143,9 +145,11 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
               isOpen={isModalOpen}
               onClose={handleCloseModal}
               channelName={selectedChannel.title}
+              channelId={selectedChannel.id} // Passando o ID
               isConnected={config.channels[selectedChannel.id]}
               agentName={config.name}
-              agentConfig={config} // Passando a configuração completa
+              agentConfig={config}
+              onUpdateConnection={handleUpdateConnection} // Passando o callback
           />
       )}
     </div>
