@@ -2,6 +2,9 @@ import React from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
 import WhatsappTestButton from './WhatsappTestButton';
 
+const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
+const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-webhook`;
+
 interface ChannelConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
