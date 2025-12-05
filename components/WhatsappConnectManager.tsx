@@ -29,6 +29,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setUserId(user.id);
+                setError(null); // Limpa o erro se o usuário for encontrado
                 fetchSession(user.id);
             } else {
                 // Se não houver usuário, definimos o erro, mas o loading será false
@@ -42,7 +43,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     // Função para buscar o estado atual da sessão no Supabase
     const fetchSession = async (id: string) => {
         setLoading(true);
-        setError(null);
+        setError(null); // Limpa o erro antes de buscar a sessão
         
         const { data, error } = await supabase
             .from('whatsapp_sessions')
@@ -165,7 +166,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             );
         }
         
-        // Exibe o erro de autenticação APENAS se não estiver conectado
+        // Exibe o erro de autenticação APENAS se não estiver conectado E houver um erro
         if (error && currentStatus !== 'connected') {
             return (
                 <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">

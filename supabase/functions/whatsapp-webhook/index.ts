@@ -69,7 +69,8 @@ const toolsDef: FunctionDeclaration[] = [
 ];
 
 // Função para executar a chamada de ferramenta
-async function handleToolCall(name: string, args: any): Promise<string> {
+async function handleToolCall(name: string, args: any): Promise<any> {
+    let statusMessage: string;
     switch (name) {
         case 'save_lead':
             const { name: leadName, phone, origin, interestLevel } = args;
@@ -86,25 +87,27 @@ async function handleToolCall(name: string, args: any): Promise<string> {
 
             if (error) {
                 console.error("Supabase Error (save_lead):", error);
-                return `Erro ao salvar lead: ${error.message}`;
+                statusMessage = `Erro ao salvar lead: ${error.message}`;
+            } else {
+                statusMessage = `Lead salvo com sucesso. ID: ${data[0].id}`;
             }
-            
-            return `Lead salvo com sucesso. ID: ${data[0].id}`;
+            return { status: statusMessage };
 
         case 'create_ticket':
-            // Lógica de simulação para criação de ticket
-            return `Ticket de suporte criado com sucesso na categoria ${args.category}.`;
+            statusMessage = `Ticket de suporte criado com sucesso na categoria ${args.category}.`;
+            return { status: statusMessage };
             
         case 'check_stock':
-            // Lógica de simulação para checagem de estoque
-            return `O produto ${args.productName} está em estoque.`;
+            statusMessage = `O produto ${args.productName} está em estoque.`;
+            return { status: statusMessage };
             
         case 'send_file':
-            // Lógica de simulação para envio de arquivo
-            return `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
+            statusMessage = `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
+            return { status: statusMessage };
 
         default:
-            return `Ferramenta desconhecida: ${name}`;
+            statusMessage = `Ferramenta desconhecida: ${name}`;
+            return { status: statusMessage };
     }
 }
 
@@ -175,7 +178,7 @@ serve(async (req) => {
                     functionResponse: {
                         name: fc.name,
                         response: {
-                            result: toolResult, // CORRIGIDO: Usando 'result' em vez de 'content'
+                            result: toolResult, // Agora toolResult é um objeto { status: string }
                         },
                     },
                 });
