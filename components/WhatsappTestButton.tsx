@@ -22,7 +22,7 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
         
         // Mensagem de teste alterada para forçar o uso da ferramenta save_lead
         const testPayload = {
-            message: `Quero comprar agora! Meu nome é Teste Dyad e meu telefone é (11) 98765-4321. Por favor, me ligue.`,
+            message: `Eu quero que você salve meu contato como um lead. Meu nome é Teste Dyad e meu telefone é (11) 98765-4321. Estou pronto para comprar.`,
             sender: 'Dyad Test User',
             agentConfig: agentConfig, // Enviando a configuração completa
         };
@@ -73,7 +73,8 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
                     <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                     <Send className="w-4 h-4" />
-                )}
+                )
+                }
                 <span>{isLoading ? 'Enviando Teste...' : 'Enviar Mensagem de Teste'}</span>
             </button>
             
