@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '@/src/integrations/supabase/client';
+import { useAuth } from '@/src/components/SessionProvider'; // Importando useAuth
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
 const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-connect`;
@@ -17,24 +18,25 @@ interface WhatsappConnectManagerProps {
 }
 
 const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConnected, onUpdateStatus }) => {
+    const { user, isLoading: isAuthLoading } = useAuth(); // Usando useAuth
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetchSession();
-    }, []);
+        if (!isAuthLoading && user) {
+            fetchSession();
+        } else if (!isAuthLoading && !user) {
+            setError("Usuário não autenticado. Por favor, faça login.");
+        }
+    }, [isAuthLoading, user]);
     
     // Função para buscar o estado atual da sessão no Supabase
     const fetchSession = async () => {
+        if (!user) return; // Garantir que o usuário existe
+        
         setLoading(true);
         setError(null);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            setError("Usuário não autenticado.");
-            setLoading(false);
-            return;
-        }
         
         const { data, error } = await supabase
             .from('whatsapp_sessions')
@@ -56,12 +58,17 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
 
     // Função para iniciar a conexão (chama a Edge Function)
     const startConnection = async () => {
+        if (!user) {
+            setError("Sessão de usuário não encontrada. Faça login novamente.");
+            return;
+        }
+        
         setLoading(true);
         setError(null);
         
         const { data: { session: authSession } } = await supabase.auth.getSession();
         if (!authSession) {
-            setError("Sessão de usuário não encontrada. Faça login novamente.");
+            setError("Sessão de autenticação não encontrada.");
             setLoading(false);
             return;
         }
@@ -103,12 +110,14 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     
     // Função para simular a mudança de status para 'connected'
     const simulateConnectionSuccess = async (token: string) => {
+        if (!user) return;
+        
         // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
         // Aqui, atualizamos o Supabase diretamente para simular o sucesso
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'connected' })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id))
+            .eq('user_id', user.id)
             .select()
             .single();
             
@@ -122,11 +131,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     }
     
     const disconnect = async () => {
+        if (!user) return;
+        
         setLoading(true);
         const { error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'disconnected', qr_code_data: null })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id));
+            .eq('user_id', user.id);
             
         if (error) {
             setError("Falha ao desconectar.");
@@ -141,11 +152,11 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const qrCodeData = session?.qr_code_data;
 
     const renderContent = () => {
-        if (loading && !session) {
+        if (isAuthLoading || loading && !session) {
             return (
                 <div className="flex justify-center items-center py-10 text-blue-400">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                    Carregando status da sessão...
+                    {isAuthLoading ? 'Verificando autenticação...' : 'Carregando status da sessão...'}
                 </div>
             );
         }
@@ -153,8 +164,8 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         if (error) {
             return (
                 <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-3" />
-                    Erro: {error}
+                    <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" />
+                    <p>{error}</p>
                 </div>
             );
         }
@@ -229,7 +240,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             <div className="p-3 bg-amber-900/30 text-amber-400 rounded-lg text-sm flex items-start space-x-3">
                 <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <p>
-                    **Aviso de Arquitetura (Fly.io):** A conexão via QR Code requer um servidor de longa duração (como o Fly.io) para hospedar o cliente WhatsApp (ex: Baileys/Venom). Esta função aqui apenas simula o gerenciamento de estado (QR Code e status) no Supabase, que seria atualizado pelo seu servidor externo.
+                    **Aviso:** Esta arquitetura de QR Code é gratuita por mensagem, mas requer um servidor de longa duração (como o Fly.io) para manter a sessão ativa. Esta função aqui apenas simula o gerenciamento de estado (QR Code e status) no Supabase, que seria atualizado pelo seu servidor externo.
                 </p>
             </div>
             {renderContent()}

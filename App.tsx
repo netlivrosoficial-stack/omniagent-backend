@@ -7,12 +7,17 @@ import Exporter from './components/Exporter';
 import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
-import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
+import LeadsPanel from './components/LeadsPanel';
+import Login from './src/pages/Login'; // Importando a página de Login
+import SessionProvider, { useAuth } from './src/components/SessionProvider'; // Importando o Provedor de Sessão e o hook
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
 
-const App: React.FC = () => {
+// Componente principal que contém a lógica de navegação e estado
+const MainAppContent: React.FC = () => {
+  const { session, isLoading } = useAuth();
+  
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
   const [config, setConfig] = useState<AgentConfig>(() => {
@@ -95,7 +100,7 @@ const App: React.FC = () => {
       case AppView.SIMULATOR:
         if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
         return <Simulator config={config} geminiService={geminiService} />;
-      case AppView.LEADS: // Novo caso
+      case AppView.LEADS:
         return <LeadsPanel />;
       case AppView.CONFIGURATION:
         return <ConfigPanel config={config} setConfig={setConfig} />;
@@ -111,6 +116,16 @@ const App: React.FC = () => {
         return <Dashboard />;
     }
   };
+  
+  // Se estiver carregando ou não autenticado, mostre a tela de login/carregamento
+  if (isLoading) {
+      // O SessionProvider já lida com a tela de carregamento, mas mantemos a verificação aqui.
+      return null; 
+  }
+  
+  if (!session) {
+      return <Login />;
+  }
 
   return (
     <div className="flex bg-slate-900 text-slate-200">
@@ -123,5 +138,11 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+const App: React.FC = () => (
+    <SessionProvider>
+        <MainAppContent />
+    </SessionProvider>
+);
 
 export default App;
