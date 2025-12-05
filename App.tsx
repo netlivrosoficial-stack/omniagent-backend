@@ -7,13 +7,18 @@ import Exporter from './components/Exporter';
 import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
-import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
+import LeadsPanel from './components/LeadsPanel';
+import Login from './pages/Login'; // Importando a página de Login
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
+import { supabase } from './integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
   
   const [config, setConfig] = useState<AgentConfig>(() => {
     try {
@@ -72,7 +77,27 @@ const App: React.FC = () => {
     };
   });
 
-  // Inicializa o serviço Gemini usando a chave da configuração.
+  // 1. Gerenciamento de Autenticação
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoadingAuth(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoadingAuth(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 2. Persistência da Configuração
+  useEffect(() => {
+    localStorage.setItem('agent-config', JSON.stringify(config));
+  }, [config]);
+
+  // 3. Inicialização do Serviço Gemini
   const geminiService = useMemo(() => {
     if (!config.apiKey) return null;
     try {
@@ -81,12 +106,15 @@ const App: React.FC = () => {
         console.error("Failed to initialize Gemini Service:", e);
         return null;
     }
-  }, [config.apiKey]); // Recria o serviço se a chave mudar
+  }, [config.apiKey]);
   
-  useEffect(() => {
-    localStorage.setItem('agent-config', JSON.stringify(config));
-  }, [config]);
+  if (loadingAuth) {
+    return <div className="min-h-screen flex items-center justify-center text-white bg-slate-900">Carregando...</div>;
+  }
 
+  if (!session) {
+    return <Login />;
+  }
   
   const renderView = () => {
     switch (currentView) {
@@ -95,7 +123,7 @@ const App: React.FC = () => {
       case AppView.SIMULATOR:
         if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
         return <Simulator config={config} geminiService={geminiService} />;
-      case AppView.LEADS: // Novo caso
+      case AppView.LEADS:
         return <LeadsPanel />;
       case AppView.CONFIGURATION:
         return <ConfigPanel config={config} setConfig={setConfig} />;

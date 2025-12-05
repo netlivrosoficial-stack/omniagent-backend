@@ -74,6 +74,11 @@ async function handleToolCall(name: string, args: any): Promise<string> {
         case 'save_lead':
             const { name: leadName, phone, origin, interestLevel } = args;
             
+            // Validação básica para garantir que os campos obrigatórios estão presentes
+            if (!leadName || !phone) {
+                return `Erro: Nome e telefone são obrigatórios para salvar o lead. Recebido: Nome=${leadName}, Telefone=${phone}`;
+            }
+
             const { data, error } = await supabase
                 .from('leads')
                 .insert([{ 
