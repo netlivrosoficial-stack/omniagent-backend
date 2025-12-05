@@ -8,7 +8,7 @@ import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
 import LeadsPanel from './components/LeadsPanel';
-import Login from './pages/Login'; // Usando o caminho relativo padrão
+import Login from './src/pages/Login'; // Caminho corrigido para './src/pages/Login'
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
