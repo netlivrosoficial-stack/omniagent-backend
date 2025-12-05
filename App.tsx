@@ -7,14 +7,55 @@ import Exporter from './components/Exporter';
 import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
-import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
+import LeadsPanel from './components/LeadsPanel';
+import Login from './src/pages/Login'; // Importando a página de Login
+import SessionProvider, { useAuth } from './src/components/SessionProvider'; // Importando o SessionProvider e useAuth
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
 
-const App: React.FC = () => {
+// Componente principal que lida com a navegação interna
+const MainAppContent: React.FC<{ config: AgentConfig, setConfig: React.Dispatch<React.SetStateAction<AgentConfig>>, geminiService: GeminiService | null }> = ({ config, setConfig, geminiService }) => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
+  const renderView = () => {
+    switch (currentView) {
+      case AppView.DASHBOARD:
+        return <Dashboard />;
+      case AppView.SIMULATOR:
+        if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
+        return <Simulator config={config} geminiService={geminiService} />;
+      case AppView.LEADS:
+        return <LeadsPanel />;
+      case AppView.CONFIGURATION:
+        return <ConfigPanel config={config} setConfig={setConfig} />;
+      case AppView.TRAINING:
+        return <TrainingPanel config={config} setConfig={setConfig} />;
+      case AppView.CHANNELS:
+        return <ChannelsPanel config={config} setConfig={setConfig} />;
+      case AppView.INTEGRATIONS:
+        return <IntegrationsPanel config={config} setConfig={setConfig} />;
+      case AppView.EXPORTER:
+        return <Exporter config={config} />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
+  return (
+    <div className="flex bg-slate-900 text-slate-200">
+      <Sidebar currentView={currentView} onChangeView={setCurrentView} />
+      <main className="flex-1 ml-20 lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">
+        <div className="w-full max-w-7xl mx-auto">
+           {renderView()}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+
+const App: React.FC = () => {
   const [config, setConfig] = useState<AgentConfig>(() => {
     try {
       const savedConfig = localStorage.getItem('agent-config');
@@ -100,41 +141,22 @@ const App: React.FC = () => {
     localStorage.setItem('agent-config', JSON.stringify(config));
   }, [config]);
 
-  
-  const renderView = () => {
-    switch (currentView) {
-      case AppView.DASHBOARD:
-        return <Dashboard />;
-      case AppView.SIMULATOR:
-        if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
-        return <Simulator config={config} geminiService={geminiService} />;
-      case AppView.LEADS: // Novo caso
-        return <LeadsPanel />;
-      case AppView.CONFIGURATION:
-        return <ConfigPanel config={config} setConfig={setConfig} />;
-      case AppView.TRAINING:
-        return <TrainingPanel config={config} setConfig={setConfig} />;
-      case AppView.CHANNELS:
-        return <ChannelsPanel config={config} setConfig={setConfig} />;
-      case AppView.INTEGRATIONS:
-        return <IntegrationsPanel config={config} setConfig={setConfig} />;
-      case AppView.EXPORTER:
-        return <Exporter config={config} />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
   return (
-    <div className="flex bg-slate-900 text-slate-200">
-      <Sidebar currentView={currentView} onChangeView={setCurrentView} />
-      <main className="flex-1 ml-20 lg:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen">
-        <div className="w-full max-w-7xl mx-auto">
-           {renderView()}
-        </div>
-      </main>
-    </div>
+    <SessionProvider>
+      <AuthWrapper config={config} setConfig={setConfig} geminiService={geminiService} />
+    </SessionProvider>
   );
 };
+
+// Componente que decide se mostra o Login ou o App
+const AuthWrapper: React.FC<{ config: AgentConfig, setConfig: React.Dispatch<React.SetStateAction<AgentConfig>>, geminiService: GeminiService | null }> = ({ config, setConfig, geminiService }) => {
+    const { user } = useAuth();
+    
+    if (!user) {
+        return <Login />;
+    }
+    
+    return <MainAppContent config={config} setConfig={setConfig} geminiService={geminiService} />;
+}
 
 export default App;

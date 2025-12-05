@@ -136,12 +136,14 @@ serve(async (req) => {
         throw new Error("Agent configuration is missing in the request body.");
     }
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY environment variable is not set.");
+    // Prioriza a chave de API enviada pelo frontend (para simulação)
+    const API_KEY = agentConfig.apiKey || Deno.env.get("GEMINI_API_KEY");
+    
+    if (!API_KEY) {
+        throw new Error("GEMINI_API_KEY is not set in agent config or environment variables.");
     }
 
-    const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
     
     let finalSystemInstruction = agentConfig.systemInstruction;
     
@@ -169,8 +171,8 @@ serve(async (req) => {
     let toolCallsExecuted = false;
     let result;
     
-    // Primeira chamada: Envia a mensagem de texto
-    result = await chat.sendMessage({ message: message });
+    // Primeira chamada: Envia a mensagem de texto usando o formato Parts
+    result = await chat.sendMessage({ parts: [{ text: message }] });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
