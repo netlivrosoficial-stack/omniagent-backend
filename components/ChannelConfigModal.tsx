@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
 import WhatsappTestButton from './WhatsappTestButton';
+import { AgentConfig } from '../types';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
 const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-webhook`;
@@ -10,10 +11,11 @@ interface ChannelConfigModalProps {
   onClose: () => void;
   channelName: string;
   isConnected: boolean;
-  agentName: string; // Added agentName prop
+  agentName: string;
+  agentConfig: AgentConfig; // Novo prop
 }
 
-const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose, channelName, isConnected, agentName }) => {
+const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose, channelName, isConnected, agentName, agentConfig }) => {
   if (!isOpen) return null;
 
   return (
@@ -59,7 +61,7 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({ isOpen, onClose
                     </div>
                 </div>
                 
-                <WhatsappTestButton agentName={agentName} />
+                <WhatsappTestButton agentName={agentName} agentConfig={agentConfig} />
             </>
           )}
           

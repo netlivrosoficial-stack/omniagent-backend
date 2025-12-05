@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Send, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { AgentConfig } from '../types';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
 const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-webhook`;
 
 interface WhatsappTestButtonProps {
     agentName: string;
+    agentConfig: AgentConfig; // Novo prop para a configuração completa
 }
 
-const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName }) => {
+const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agentConfig }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [responseMessage, setResponseMessage] = useState('');
@@ -20,7 +22,8 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName }) =>
         
         const testPayload = {
             message: `Teste de conexão do agente ${agentName}.`,
-            sender: 'Dyad Test User'
+            sender: 'Dyad Test User',
+            agentConfig: agentConfig, // Enviando a configuração completa
         };
 
         try {

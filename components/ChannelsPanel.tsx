@@ -144,7 +144,8 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
               onClose={handleCloseModal}
               channelName={selectedChannel.title}
               isConnected={config.channels[selectedChannel.id]}
-              agentName={config.name} // Passando o nome do agente
+              agentName={config.name}
+              agentConfig={config} // Passando a configuração completa
           />
       )}
     </div>
