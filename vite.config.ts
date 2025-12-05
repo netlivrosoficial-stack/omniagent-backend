@@ -9,20 +9,7 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [
-        react({
-          // Força o uso do runtime automático, que é compatível com o React 19
-          jsxRuntime: 'automatic' 
-        })
-      ],
-      optimizeDeps: {
-        exclude: ['react', 'react-dom'],
-      },
-      build: {
-        rollupOptions: {
-          external: ['react', 'react-dom', 'react-dom/client'],
-        },
-      },
+      plugins: [react()],
       define: {
         // Removendo a injeção da chave de API do Gemini, pois ela será gerenciada pelo estado do React.
       },

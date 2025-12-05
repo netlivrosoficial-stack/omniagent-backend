@@ -1,4 +1,4 @@
-import { useState, FC } from 'react';
+import React, { useState } from 'react';
 import { Send, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { AgentConfig } from '../types';
 
@@ -10,7 +10,7 @@ interface WhatsappTestButtonProps {
     agentConfig: AgentConfig; // Novo prop para a configuração completa
 }
 
-const WhatsappTestButton: FC<WhatsappTestButtonProps> = ({ agentName, agentConfig }) => {
+const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agentConfig }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [responseMessage, setResponseMessage] = useState('');

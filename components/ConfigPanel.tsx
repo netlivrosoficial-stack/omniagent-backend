@@ -1,14 +1,14 @@
-import { useState, FC, Dispatch, SetStateAction } from 'react';
+import React, { useState } from 'react';
 import { AgentConfig } from '../types';
 import { RefreshCw, Save, Check } from 'lucide-react';
 import { SUPREME_PROMPT_DEFAULT } from '../constants';
 
 interface ConfigPanelProps {
   config: AgentConfig;
-  setConfig: Dispatch<SetStateAction<AgentConfig>>;
+  setConfig: React.Dispatch<React.SetStateAction<AgentConfig>>;
 }
 
-const ConfigPanel: FC<ConfigPanelProps> = ({ config, setConfig }) => {
+const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   

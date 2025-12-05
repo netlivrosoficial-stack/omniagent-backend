@@ -1,4 +1,4 @@
-import { useState, FC } from 'react';
+import React, { useState } from 'react';
 import { Copy, Check, Download } from 'lucide-react';
 import { AgentConfig } from '../types';
 
@@ -6,7 +6,7 @@ interface ExporterProps {
   config: AgentConfig;
 }
 
-const Exporter: FC<ExporterProps> = ({ config }) => {
+const Exporter: React.FC<ExporterProps> = ({ config }) => {
   const [copied, setCopied] = useState(false);
   
   const exportData = {

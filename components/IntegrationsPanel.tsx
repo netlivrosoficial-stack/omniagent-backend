@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import React from 'react';
 import { AgentConfig } from '../types';
 
 // Placeholder icons for integrations
@@ -40,7 +40,7 @@ interface IntegrationCardProps {
     isBeta?: boolean;
 }
 
-const IntegrationCard: FC<IntegrationCardProps> = ({ icon, title, description, active, onToggle, isBeta }) => (
+const IntegrationCard: React.FC<IntegrationCardProps> = ({ icon, title, description, active, onToggle, isBeta }) => (
     <div className="bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col justify-between transition-all hover:border-slate-600 hover:shadow-lg">
         <div className="p-6">
             <div className="mb-4">{icon}</div>
@@ -71,7 +71,7 @@ interface IntegrationsPanelProps {
     setConfig: React.Dispatch<React.SetStateAction<AgentConfig>>;
 }
 
-const IntegrationsPanel: FC<IntegrationsPanelProps> = ({ config, setConfig }) => {
+const IntegrationsPanel: React.FC<IntegrationsPanelProps> = ({ config, setConfig }) => {
     
     const handleToggle = (integration: keyof AgentConfig['integrations']) => {
         setConfig(prev => ({

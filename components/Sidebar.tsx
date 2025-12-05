@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import React from 'react';
 import { LayoutDashboard, MessageSquare, Settings, FileJson, Bot, BookOpen, Share2, Puzzle, Users } from 'lucide-react';
 import { AppView } from '../types';
 
@@ -7,7 +7,7 @@ interface SidebarProps {
   onChangeView: (view: AppView) => void;
 }
 
-const Sidebar: FC<SidebarProps> = ({ currentView, onChangeView }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
   const menuItems = [
     { id: AppView.DASHBOARD, icon: LayoutDashboard, label: 'Painel' },
     { id: AppView.SIMULATOR, icon: MessageSquare, label: 'Simulador' },

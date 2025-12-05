@@ -1,4 +1,4 @@
-import { useState, useEffect, FC } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Loader2, AlertTriangle, Phone, Tag, Clock } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
 
@@ -11,7 +11,7 @@ interface Lead {
     created_at: string;
 }
 
-const LeadsPanel: FC = () => {
+const LeadsPanel: React.FC = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

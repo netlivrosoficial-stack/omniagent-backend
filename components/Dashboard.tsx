@@ -1,8 +1,8 @@
-import { FC } from 'react';
+import React from 'react';
 import { ArrowUpRight, MessageCircle, DollarSign, Ticket, Users } from 'lucide-react';
 import { MOCK_CHART_DATA } from '../constants';
 
-const StatCard: FC<{ title: string; value: string; icon: React.ElementType; change: string; }> = ({ title, value, icon: Icon, change }) => (
+const StatCard: React.FC<{ title: string; value: string; icon: React.ElementType; change: string; }> = ({ title, value, icon: Icon, change }) => (
   <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
     <div className="flex justify-between items-start">
       <div>
@@ -20,7 +20,7 @@ const StatCard: FC<{ title: string; value: string; icon: React.ElementType; chan
   </div>
 );
 
-const SimpleBarChart: FC<{ data: any[], dataKey: string, labelKey: string, color: string }> = ({ data, dataKey, labelKey, color }) => {
+const SimpleBarChart: React.FC<{ data: any[], dataKey: string, labelKey: string, color: string }> = ({ data, dataKey, labelKey, color }) => {
   const maxValue = Math.max(...data.map(d => d[dataKey]));
   return (
     <div className="w-full h-64 flex justify-between items-end space-x-2 pt-4">
@@ -39,7 +39,7 @@ const SimpleBarChart: FC<{ data: any[], dataKey: string, labelKey: string, color
 };
 
 
-const Dashboard: FC = () => {
+const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
