@@ -22,6 +22,7 @@ export interface TrainingItem {
 export interface AgentConfig {
   name: string;
   personality: string;
+  apiKey: string; // Novo campo para a chave de API
   modules: {
     sales: boolean;
     support: boolean;

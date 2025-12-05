@@ -62,6 +62,19 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
             </select>
           </div>
         </div>
+        
+        {/* Novo campo para a Chave de API */}
+        <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-400 mb-2">Chave de API do Gemini (Frontend)</label>
+            <input 
+              type="password"
+              value={config.apiKey}
+              onChange={(e) => setConfig({...config, apiKey: e.target.value})}
+              placeholder="Insira sua chave de API do Google Gemini aqui"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none"
+            />
+            <p className="text-xs text-slate-500 mt-1">Esta chave é usada apenas para o Simulador e é salva localmente no seu navegador.</p>
+        </div>
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-400 mb-2">Módulos Ativos</label>

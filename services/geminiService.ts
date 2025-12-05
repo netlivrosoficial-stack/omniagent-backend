@@ -58,13 +58,10 @@ const toolsDef: FunctionDeclaration[] = [
 export class GeminiService {
   private ai: GoogleGenAI | null = null;
   private modelName = "gemini-2.5-flash";
-  private apiKey: string | undefined;
 
-  constructor() {
-    // Captura a chave de API injetada pelo Vite
-    this.apiKey = process.env.API_KEY;
-    if (this.apiKey) {
-        this.ai = new GoogleGenAI({ apiKey: this.apiKey });
+  constructor(apiKey: string) {
+    if (apiKey) {
+        this.ai = new GoogleGenAI({ apiKey: apiKey });
     }
   }
 
@@ -75,7 +72,7 @@ export class GeminiService {
     onToolCall: (name: string, args: any) => void
   ) {
     if (!this.ai) {
-        throw new Error("GEMINI_API_KEY não está configurada. Por favor, defina a chave de API.");
+        throw new Error("O serviço Gemini não foi inicializado. Verifique a chave de API.");
     }
     
     try {

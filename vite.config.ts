@@ -11,9 +11,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        // Injetando a chave de API para uso no frontend (GeminiService)
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY)
+        // Removendo a injeção da chave de API do Gemini, pois ela será gerenciada pelo estado do React.
       },
       resolve: {
         alias: {

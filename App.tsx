@@ -38,6 +38,8 @@ const App: React.FC = () => {
                 eVendi: false,
             }
         }
+        // Ensure apiKey exists
+        if (!parsed.apiKey) parsed.apiKey = '';
         return parsed;
       }
     } catch (e) {
@@ -46,6 +48,7 @@ const App: React.FC = () => {
     return {
       name: 'OmniAgent',
       personality: 'Professional',
+      apiKey: '', // Chave de API padrão vazia
       modules: {
         sales: true,
         support: true,
@@ -69,15 +72,16 @@ const App: React.FC = () => {
     };
   });
 
-  // Inicializa o serviço Gemini. Se a chave estiver faltando, ele será null.
+  // Inicializa o serviço Gemini usando a chave da configuração.
   const geminiService = useMemo(() => {
+    if (!config.apiKey) return null;
     try {
-        return new GeminiService();
+        return new GeminiService(config.apiKey);
     } catch (e) {
         console.error("Failed to initialize Gemini Service:", e);
         return null;
     }
-  }, []);
+  }, [config.apiKey]); // Recria o serviço se a chave mudar
   
   useEffect(() => {
     localStorage.setItem('agent-config', JSON.stringify(config));
@@ -89,7 +93,7 @@ const App: React.FC = () => {
       case AppView.DASHBOARD:
         return <Dashboard />;
       case AppView.SIMULATOR:
-        if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Verifique se a API_KEY está configurada.</div>;
+        if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
         return <Simulator config={config} geminiService={geminiService} />;
       case AppView.LEADS: // Novo caso
         return <LeadsPanel />;
