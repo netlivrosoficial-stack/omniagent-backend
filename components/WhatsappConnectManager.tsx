@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
-import { supabase } from '../src/integrations/supabase/client';
+import { supabase } from '@/src/integrations/supabase/client';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
 const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-connect`;
@@ -67,6 +67,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         }
 
         try {
+            // Esta chamada simula o início do processo no servidor externo (Fly.io)
             const response = await fetch(EDGE_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
@@ -228,7 +229,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             <div className="p-3 bg-amber-900/30 text-amber-400 rounded-lg text-sm flex items-start space-x-3">
                 <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <p>
-                    **Aviso:** Esta arquitetura de QR Code é gratuita por mensagem, mas requer um servidor de longa duração (não Edge Function) para manter a sessão ativa. A função aqui é apenas para simulação e gerenciamento de estado.
+                    **Aviso de Arquitetura (Fly.io):** A conexão via QR Code requer um servidor de longa duração (como o Fly.io) para hospedar o cliente WhatsApp (ex: Baileys/Venom). Esta função aqui apenas simula o gerenciamento de estado (QR Code e status) no Supabase, que seria atualizado pelo seu servidor externo.
                 </p>
             </div>
             {renderContent()}
