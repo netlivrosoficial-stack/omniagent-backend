@@ -20,8 +20,9 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
         setStatus('idle');
         setResponseMessage('');
         
+        // Mensagem de teste alterada para forçar o uso da ferramenta save_lead
         const testPayload = {
-            message: `Teste de conexão do agente ${agentName}.`,
+            message: `Quero comprar agora! Meu nome é Teste Dyad e meu telefone é (11) 98765-4321. Por favor, me ligue.`,
             sender: 'Dyad Test User',
             agentConfig: agentConfig, // Enviando a configuração completa
         };
@@ -40,7 +41,8 @@ const WhatsappTestButton: React.FC<WhatsappTestButtonProps> = ({ agentName, agen
 
             if (response.ok) {
                 setStatus('success');
-                setResponseMessage(data.response || 'Webhook testado com sucesso!');
+                // Exibe a resposta completa para ver se a ferramenta foi chamada
+                setResponseMessage(`Resposta do Agente:\n${data.response}\n\nDetalhes da Edge Function:\nTool Calls Executadas: ${data.toolCallsExecuted ? 'Sim' : 'Não'}\nProcessado por: ${data.processedBy}`);
             } else {
                 setStatus('error');
                 setResponseMessage(data.error || 'Erro desconhecido ao testar o webhook.');
