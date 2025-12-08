@@ -67,16 +67,19 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'connected' })
-            .eq('user_id', user.id) // CORRIGIDO: Usando user.id diretamente
-            .select()
-            .single();
+            .eq('user_id', user.id)
+            .select(); // Removendo .single() para evitar falha se a linha não for encontrada
             
         if (error) {
             console.error("Simulação de conexão falhou:", error);
             setError("Falha na simulação de conexão.");
-        } else if (data) {
-            setSession(data as SessionData);
+        } else if (data && data.length > 0) {
+            setSession(data[0] as SessionData);
             onUpdateStatus(true);
+        } else {
+            // Se não encontrou a linha para atualizar (o que não deveria acontecer após a EF), 
+            // tentamos buscar o estado novamente para garantir a coerência.
+            fetchSession(); 
         }
     }
 
@@ -113,7 +116,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 });
                 // Simula a conexão automática após 5 segundos para fins de demonstração
                 setTimeout(() => {
-                    simulateConnectionSuccess(); // Chamada corrigida
+                    simulateConnectionSuccess();
                 }, 5000);
             } else {
                 setError(data.error || 'Falha ao iniciar a conexão.');
@@ -140,7 +143,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         const { error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'disconnected', qr_code_data: null })
-            .eq('user_id', user.id); // CORRIGIDO: Usando user.id diretamente
+            .eq('user_id', user.id);
             
         if (error) {
             setError("Falha ao desconectar.");
