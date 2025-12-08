@@ -11,8 +11,10 @@ import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
 import { AgentConfig, AppView } from './types';
 import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
+import { useAuth } from './src/SessionContextProvider'; // Importando useAuth
 
 const App: React.FC = () => {
+  const { user } = useAuth(); // Usando o hook de autenticação
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
   const [config, setConfig] = useState<AgentConfig>(() => {
@@ -74,14 +76,15 @@ const App: React.FC = () => {
 
   // Inicializa o serviço Gemini usando a chave da configuração.
   const geminiService = useMemo(() => {
-    if (!config.apiKey) return null;
+    // Só inicializa se houver chave de API e o usuário estiver logado (embora o index.tsx já garanta o login)
+    if (!config.apiKey || !user) return null; 
     try {
         return new GeminiService(config.apiKey);
     } catch (e) {
         console.error("Failed to initialize Gemini Service:", e);
         return null;
     }
-  }, [config.apiKey]); // Recria o serviço se a chave mudar
+  }, [config.apiKey, user]); // Recria o serviço se a chave ou o usuário mudar
   
   useEffect(() => {
     localStorage.setItem('agent-config', JSON.stringify(config));
