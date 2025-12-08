@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      // Forçar a otimização de dependências para evitar múltiplas instâncias do React
+      optimizeDeps: {
+        include: ['react', 'react-dom', '@supabase/auth-ui-react', '@supabase/auth-ui-shared'],
       }
     };
 });
