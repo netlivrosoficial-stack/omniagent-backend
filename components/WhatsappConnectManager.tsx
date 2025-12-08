@@ -54,6 +54,32 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         setLoading(false);
     };
 
+    // Função para simular a mudança de status para 'connected'
+    const simulateConnectionSuccess = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            setError("Usuário não autenticado para simular conexão.");
+            return;
+        }
+        
+        // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
+        // Aqui, atualizamos o Supabase diretamente para simular o sucesso
+        const { data, error } = await supabase
+            .from('whatsapp_sessions')
+            .update({ status: 'connected' })
+            .eq('user_id', user.id) // CORRIGIDO: Usando user.id diretamente
+            .select()
+            .single();
+            
+        if (error) {
+            console.error("Simulação de conexão falhou:", error);
+            setError("Falha na simulação de conexão.");
+        } else if (data) {
+            setSession(data as SessionData);
+            onUpdateStatus(true);
+        }
+    }
+
     // Função para iniciar a conexão (chama a Edge Function)
     const startConnection = async () => {
         setLoading(true);
@@ -87,7 +113,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 });
                 // Simula a conexão automática após 5 segundos para fins de demonstração
                 setTimeout(() => {
-                    simulateConnectionSuccess(authSession.access_token);
+                    simulateConnectionSuccess(); // Chamada corrigida
                 }, 5000);
             } else {
                 setError(data.error || 'Falha ao iniciar a conexão.');
@@ -100,32 +126,21 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         }
     };
     
-    // Função para simular a mudança de status para 'connected'
-    const simulateConnectionSuccess = async (token: string) => {
-        // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
-        // Aqui, atualizamos o Supabase diretamente para simular o sucesso
-        const { data, error } = await supabase
-            .from('whatsapp_sessions')
-            .update({ status: 'connected' })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id))
-            .select()
-            .single();
-            
-        if (error) {
-            console.error("Simulação de conexão falhou:", error);
-            setError("Falha na simulação de conexão.");
-        } else if (data) {
-            setSession(data as SessionData);
-            onUpdateStatus(true);
-        }
-    }
     
     const disconnect = async () => {
         setLoading(true);
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            setError("Usuário não autenticado para desconectar.");
+            setLoading(false);
+            return;
+        }
+        
         const { error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'disconnected', qr_code_data: null })
-            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id));
+            .eq('user_id', user.id); // CORRIGIDO: Usando user.id diretamente
             
         if (error) {
             setError("Falha ao desconectar.");
@@ -217,7 +232,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                     className="flex items-center justify-center mx-auto space-x-2 bg-blue-600 text-white font-medium px-5 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-slate-600"
                 >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
-                    <span>{loading ? 'Iniciando...' : 'Gerar QR Code'}</span>
+                    <span>{loading ? 'Gerando QR Code...' : 'Gerar QR Code'}</span>
                 </button>
             </div>
         );
