@@ -62,13 +62,16 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             return;
         }
         
+        // Adicionando um pequeno atraso para garantir que a Edge Function tenha criado a linha
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+        
         // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
         // Aqui, atualizamos o Supabase diretamente para simular o sucesso
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'connected' })
             .eq('user_id', user.id)
-            .select(); // Removendo .single() para evitar falha se a linha não for encontrada
+            .select(); 
             
         if (error) {
             console.error("Simulação de conexão falhou:", error);
@@ -77,8 +80,8 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             setSession(data[0] as SessionData);
             onUpdateStatus(true);
         } else {
-            // Se não encontrou a linha para atualizar (o que não deveria acontecer após a EF), 
-            // tentamos buscar o estado novamente para garantir a coerência.
+            // Se a atualização falhou silenciosamente (não encontrou a linha), 
+            // tentamos buscar o estado novamente para ver se a EF criou a linha.
             fetchSession(); 
         }
     }
