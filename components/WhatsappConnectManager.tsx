@@ -95,6 +95,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         }
 
         try {
+            console.log(`[WhatsappManager] Chamando START em: ${WHATSAPP_BACKEND_URL}/api/whatsapp/start`);
             // Chamada para o backend real no Fly.io
             const response = await fetch(`${WHATSAPP_BACKEND_URL}/api/whatsapp/start`, {
                 method: 'POST',
@@ -107,15 +108,18 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             const data = await response.json();
 
             if (response.ok) {
+                console.log("[WhatsappManager] START OK. Resposta:", data);
                 // O backend iniciou o processo e irá atualizar o Supabase.
                 // Iniciamos a busca imediata para pegar o QR code.
                 await fetchSession(); 
             } else {
+                console.error("[WhatsappManager] START Falhou. Resposta:", data);
                 setError(data.error || 'Falha ao iniciar a conexão no servidor Fly.io.');
                 setSession(null);
             }
 
         } catch (err) {
+            console.error("[WhatsappManager] Erro de rede ao chamar START:", err);
             setError('Erro de rede ao chamar o Fly.io Backend. Verifique a URL.');
             setSession(null);
         } finally {
@@ -131,6 +135,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         }
         
         setLoading(true);
+        setError(null);
         
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -140,6 +145,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         }
         
         try {
+            console.log(`[WhatsappManager] Chamando DISCONNECT em: ${WHATSAPP_BACKEND_URL}/api/whatsapp/disconnect`);
             // Chamada para o backend real no Fly.io para destruir a sessão
             const response = await fetch(`${WHATSAPP_BACKEND_URL}/api/whatsapp/disconnect`, {
                 method: 'POST',
@@ -150,14 +156,17 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             });
             
             if (response.ok) {
+                console.log("[WhatsappManager] DISCONNECT OK.");
                 // O backend já atualizou o Supabase, apenas buscamos o novo estado
                 await fetchSession();
             } else {
                 const data = await response.json();
+                console.error("[WhatsappManager] DISCONNECT Falhou. Resposta:", data);
                 setError(data.error || "Falha ao desconectar no servidor Fly.io.");
             }
             
         } catch (err) {
+            console.error("[WhatsappManager] Erro de rede ao chamar DISCONNECT:", err);
             setError('Erro de rede ao chamar o Fly.io Backend para desconexão.');
         } finally {
             setLoading(false);
@@ -198,7 +207,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                         className="mt-4 flex items-center justify-center mx-auto space-x-2 bg-red-600 text-white font-medium px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors disabled:bg-slate-600"
                     >
                         <LogOut className="w-4 h-4" />
-                        <span>Desconectar</span>
+                        <span>{loading ? 'Desconectando...' : 'Desconectar'}</span>
                     </button>
                 </div>
             );
