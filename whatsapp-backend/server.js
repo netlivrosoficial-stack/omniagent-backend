@@ -190,5 +190,6 @@ app.get('/api/whatsapp/status/:userId', async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`WhatsApp Backend running on port ${PORT}`);
+    console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
     // Note: We don't initialize the client here, only via the API call.
 });
