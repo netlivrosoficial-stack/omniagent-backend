@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { SessionContextProvider, useAuth } from './SessionContextProvider';
-import Login from './pages/Login';
+import { SessionContextProvider, useAuth } from './src/SessionContextProvider';
+import Login from './src/pages/Login';
 
 const Root = () => {
   const { user, isLoading } = useAuth();
