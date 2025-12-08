@@ -6,10 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-);
+// Variáveis de ambiente
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
 // Função utilitária para simular a geração de um QR Code (Base64 de um texto simples)
 function generateMockQrCode(userId: string): string {
@@ -34,10 +33,19 @@ serve(async (req) => {
     }
     
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    // Inicializa o cliente Supabase com o token do usuário
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: {
+            headers: { Authorization: `Bearer ${token}` },
+        },
+    });
+
+    // Verifica se o token é válido e obtém o usuário
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-        return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token' }), { 
+        return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token or user session' }), { 
             status: 401, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
@@ -52,6 +60,7 @@ serve(async (req) => {
     let error: any = null;
     
     // Tenta atualizar a sessão existente
+    // O RLS agora funciona porque o cliente Supabase está autenticado como o usuário
     const { data: updateData, error: updateError } = await supabase
         .from('whatsapp_sessions')
         .update({ 
@@ -61,7 +70,7 @@ serve(async (req) => {
         })
         .eq('user_id', userId)
         .select()
-        .single(); // Usando .single()
+        .single();
 
     sessionData = updateData;
     error = updateError;
@@ -75,6 +84,7 @@ serve(async (req) => {
             error = null;
         }
         
+        // A inserção agora deve passar pelo RLS
         const { data: insertData, error: insertError } = await supabase
             .from('whatsapp_sessions')
             .insert([{ 
@@ -83,7 +93,7 @@ serve(async (req) => {
                 qr_code_data: qrCodeData 
             }])
             .select()
-            .single(); // Usando .single()
+            .single();
             
         sessionData = insertData;
         error = insertError;
@@ -96,7 +106,6 @@ serve(async (req) => {
         throw new Error(`Failed to manage session: ${error.message}`);
     }
     
-    // Agora sessionData deve ser um objeto único se for bem-sucedido
     if (!sessionData) {
         console.error("[EF] Session data is null after update/insert.");
         throw new Error("Failed to retrieve session data after connection attempt.");
@@ -105,7 +114,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         status: 'connecting', 
-        qrCode: sessionData.qr_code_data, // Usando o dado retornado
+        qrCode: sessionData.qr_code_data,
         message: 'QR Code gerado com sucesso. Escaneie para conectar.'
       }),
       {
