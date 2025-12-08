@@ -64,6 +64,7 @@ serve(async (req) => {
 
     // Se não houver sessão existente, insere uma nova
     if (updateError && updateError.code === 'PGRST116') { // Código de 'no rows found'
+        console.log(`[EF] No existing session found for user ${userId}. Inserting new session.`);
         const { data: insertData, error: insertError } = await supabase
             .from('whatsapp_sessions')
             .insert([{ 
@@ -74,11 +75,18 @@ serve(async (req) => {
             .select();
         sessionData = insertData;
         error = insertError;
+    } else if (updateData && updateData.length > 0) {
+        console.log(`[EF] Existing session updated for user ${userId}.`);
     }
 
     if (error) {
-        console.error("Supabase Error:", error);
+        console.error("[EF] Supabase Error during session management:", error);
         throw new Error(`Failed to manage session: ${error.message}`);
+    }
+    
+    if (!sessionData || sessionData.length === 0) {
+        console.error("[EF] Session data is empty after update/insert.");
+        throw new Error("Failed to retrieve session data after connection attempt.");
     }
 
     return new Response(

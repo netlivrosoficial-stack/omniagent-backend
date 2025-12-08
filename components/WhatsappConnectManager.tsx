@@ -44,6 +44,8 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             
         if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
             setError(error.message);
+            setSession(null); // Garantir que o estado local seja limpo em caso de erro
+            onUpdateStatus(false);
         } else if (data) {
             setSession(data as SessionData);
             onUpdateStatus(data.status === 'connected');
@@ -76,13 +78,14 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         if (error) {
             console.error("Simulação de conexão falhou:", error);
             setError("Falha na simulação de conexão.");
+            // Se falhar, buscamos o estado real para ver se a linha existe
+            await fetchSession(); 
         } else if (data && data.length > 0) {
             setSession(data[0] as SessionData);
             onUpdateStatus(true);
         } else {
-            // Se a atualização falhou silenciosamente (não encontrou a linha), 
-            // tentamos buscar o estado novamente para ver se a EF criou a linha.
-            fetchSession(); 
+            // Se a atualização não afetou nenhuma linha, buscamos o estado real
+            await fetchSession(); 
         }
     }
 
@@ -123,10 +126,15 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 }, 5000);
             } else {
                 setError(data.error || 'Falha ao iniciar a conexão.');
+                // Se a EF falhar, garantimos que o estado local seja limpo
+                setSession(null);
+                onUpdateStatus(false);
             }
 
         } catch (err) {
             setError('Erro de rede ao chamar a Edge Function.');
+            setSession(null);
+            onUpdateStatus(false);
         } finally {
             setLoading(false);
         }
