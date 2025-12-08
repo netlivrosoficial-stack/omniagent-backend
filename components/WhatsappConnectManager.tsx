@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
 
-const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
-const EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-connect`;
+// Use environment variable for the real backend URL
+const WHATSAPP_BACKEND_URL = import.meta.env.VITE_WHATSAPP_BACKEND_URL;
 
 interface SessionData {
     status: 'disconnected' | 'connecting' | 'connected';
     qr_code_data: string | null;
     last_updated: string;
+    user_id: string;
 }
 
 interface WhatsappConnectManagerProps {
@@ -20,22 +21,45 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pollingInterval, setPollingInterval] = useState<number | null>(null);
 
+    // --- Polling Setup ---
     useEffect(() => {
         fetchSession();
+        
+        // Start polling every 5 seconds if not connected
+        const interval = setInterval(() => {
+            if (session?.status !== 'connected') {
+                fetchSession(false); // Fetch without setting loading state
+            }
+        }, 5000);
+        
+        setPollingInterval(interval as unknown as number);
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, []);
     
+    // Update parent state when local session changes
+    useEffect(() => {
+        onUpdateStatus(session?.status === 'connected');
+    }, [session?.status]);
+
+
     // Função para buscar o estado atual da sessão no Supabase
-    const fetchSession = async () => {
-        setLoading(true);
+    const fetchSession = async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         setError(null);
+        
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             setError("Usuário não autenticado.");
-            setLoading(false);
+            if (showLoading) setLoading(false);
             return;
         }
         
+        // Fetch using the authenticated client (RLS is active)
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .select('*')
@@ -44,97 +68,56 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             
         if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
             setError(error.message);
-            setSession(null); // Garantir que o estado local seja limpo em caso de erro
-            onUpdateStatus(false);
+            setSession(null);
         } else if (data) {
             setSession(data as SessionData);
-            onUpdateStatus(data.status === 'connected');
         } else {
             setSession(null);
-            onUpdateStatus(false);
         }
-        setLoading(false);
+        if (showLoading) setLoading(false);
     };
 
-    // Função para simular a mudança de status para 'connected'
-    const simulateConnectionSuccess = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            setError("Usuário não autenticado para simular conexão.");
+    // Função para iniciar a conexão (chama o Fly.io Backend)
+    const startConnection = async () => {
+        if (!WHATSAPP_BACKEND_URL) {
+            setError("VITE_WHATSAPP_BACKEND_URL não configurada. Por favor, configure a URL do seu servidor Fly.io.");
             return;
         }
         
-        // Adicionando um pequeno atraso para garantir que a Edge Function tenha criado a linha
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-        
-        // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
-        // Aqui, atualizamos o Supabase diretamente para simular o sucesso
-        const { data, error } = await supabase
-            .from('whatsapp_sessions')
-            .update({ status: 'connected' })
-            .eq('user_id', user.id)
-            .select(); 
-            
-        if (error) {
-            console.error("Simulação de conexão falhou:", error);
-            setError("Falha na simulação de conexão.");
-            // Se falhar, buscamos o estado real para ver se a linha existe
-            await fetchSession(); 
-        } else if (data && data.length > 0) {
-            setSession(data[0] as SessionData);
-            onUpdateStatus(true);
-        } else {
-            // Se a atualização não afetou nenhuma linha, buscamos o estado real
-            await fetchSession(); 
-        }
-    }
-
-    // Função para iniciar a conexão (chama a Edge Function)
-    const startConnection = async () => {
         setLoading(true);
         setError(null);
         
-        const { data: { session: authSession } } = await supabase.auth.getSession();
-        if (!authSession) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
             setError("Sessão de usuário não encontrada. Faça login novamente.");
             setLoading(false);
             return;
         }
 
         try {
-            const response = await fetch(EDGE_FUNCTION_URL, {
+            // Chamada para o backend real no Fly.io
+            const response = await fetch(`${WHATSAPP_BACKEND_URL}/api/whatsapp/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authSession.access_token}`,
                 },
-                body: JSON.stringify({ action: 'start' }),
+                body: JSON.stringify({ userId: user.id }), // Passamos o ID do usuário para o backend
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                // Simulação: Atualiza o estado local com o QR Code simulado
-                setSession({
-                    status: 'connecting',
-                    qr_code_data: data.qrCode,
-                    last_updated: new Date().toISOString()
-                });
-                // Simula a conexão automática após 5 segundos para fins de demonstração
-                setTimeout(() => {
-                    simulateConnectionSuccess();
-                }, 5000);
+                // O backend iniciou o processo e irá atualizar o Supabase.
+                // Iniciamos a busca imediata para pegar o QR code.
+                await fetchSession(); 
             } else {
-                setError(data.error || 'Falha ao iniciar a conexão.');
-                // Se a EF falhar, garantimos que o estado local seja limpo
+                setError(data.error || 'Falha ao iniciar a conexão no servidor Fly.io.');
                 setSession(null);
-                onUpdateStatus(false);
             }
 
         } catch (err) {
-            setError('Erro de rede ao chamar a Edge Function.');
+            setError('Erro de rede ao chamar o Fly.io Backend. Verifique a URL.');
             setSession(null);
-            onUpdateStatus(false);
         } finally {
             setLoading(false);
         }
@@ -142,6 +125,11 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     
     
     const disconnect = async () => {
+        if (!WHATSAPP_BACKEND_URL) {
+            setError("VITE_WHATSAPP_BACKEND_URL não configurada.");
+            return;
+        }
+        
         setLoading(true);
         
         const { data: { user } } = await supabase.auth.getUser();
@@ -151,18 +139,29 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             return;
         }
         
-        const { error } = await supabase
-            .from('whatsapp_sessions')
-            .update({ status: 'disconnected', qr_code_data: null })
-            .eq('user_id', user.id);
+        try {
+            // Chamada para o backend real no Fly.io para destruir a sessão
+            const response = await fetch(`${WHATSAPP_BACKEND_URL}/api/whatsapp/disconnect`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.id }),
+            });
             
-        if (error) {
-            setError("Falha ao desconectar.");
-        } else {
-            setSession(prev => prev ? { ...prev, status: 'disconnected', qr_code_data: null } : null);
-            onUpdateStatus(false);
+            if (response.ok) {
+                // O backend já atualizou o Supabase, apenas buscamos o novo estado
+                await fetchSession();
+            } else {
+                const data = await response.json();
+                setError(data.error || "Falha ao desconectar no servidor Fly.io.");
+            }
+            
+        } catch (err) {
+            setError('Erro de rede ao chamar o Fly.io Backend para desconexão.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }
 
     const currentStatus = session?.status || 'disconnected';
@@ -223,14 +222,14 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             {qrCodeData.substring(0, 50)}...
                         </p>
                     </div>
-                    <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Simulação: Conecta em 5s)</p>
+                    <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
                     <button 
-                        onClick={fetchSession}
+                        onClick={() => fetchSession()}
                         disabled={loading}
                         className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
                     >
                         <RefreshCw className="w-4 h-4" />
-                        <span>Verificar Status</span>
+                        <span>Verificar Status Agora</span>
                     </button>
                 </div>
             );
@@ -246,7 +245,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                     className="flex items-center justify-center mx-auto space-x-2 bg-blue-600 text-white font-medium px-5 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-slate-600"
                 >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
-                    <span>{loading ? 'Gerando QR Code...' : 'Gerar QR Code'}</span>
+                    <span>{loading ? 'Iniciando Servidor...' : 'Gerar QR Code e Conectar'}</span>
                 </button>
             </div>
         );
