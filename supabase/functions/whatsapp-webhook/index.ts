@@ -69,8 +69,7 @@ const toolsDef: FunctionDeclaration[] = [
 ];
 
 // Função para executar a chamada de ferramenta
-async function handleToolCall(name: string, args: any): Promise<any> {
-    let statusMessage: string;
+async function handleToolCall(name: string, args: any): Promise<string> {
     switch (name) {
         case 'save_lead':
             const { name: leadName, phone, origin, interestLevel } = args;
@@ -87,27 +86,25 @@ async function handleToolCall(name: string, args: any): Promise<any> {
 
             if (error) {
                 console.error("Supabase Error (save_lead):", error);
-                statusMessage = `Erro ao salvar lead: ${error.message}`;
-            } else {
-                statusMessage = `Lead salvo com sucesso. ID: ${data[0].id}`;
+                return `Erro ao salvar lead: ${error.message}`;
             }
-            return { status: statusMessage };
+            
+            return `Lead salvo com sucesso. ID: ${data[0].id}`;
 
         case 'create_ticket':
-            statusMessage = `Ticket de suporte criado com sucesso na categoria ${args.category}.`;
-            return { status: statusMessage };
+            // Lógica de simulação para criação de ticket
+            return `Ticket de suporte criado com sucesso na categoria ${args.category}.`;
             
         case 'check_stock':
-            statusMessage = `O produto ${args.productName} está em estoque.`;
-            return { status: statusMessage };
+            // Lógica de simulação para checagem de estoque
+            return `O produto ${args.productName} está em estoque.`;
             
         case 'send_file':
-            statusMessage = `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
-            return { status: statusMessage };
+            // Lógica de simulação para envio de arquivo
+            return `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
 
         default:
-            statusMessage = `Ferramenta desconhecida: ${name}`;
-            return { status: statusMessage };
+            return `Ferramenta desconhecida: ${name}`;
     }
 }
 
@@ -162,11 +159,6 @@ serve(async (req) => {
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
         
-        if (!result) {
-            aiResponseText = "Erro: Resposta vazia do modelo.";
-            break;
-        }
-        
         if (result.functionCalls && result.functionCalls.length > 0) {
             toolCallsExecuted = true;
             const toolResponses: Part[] = [];
@@ -178,7 +170,7 @@ serve(async (req) => {
                     functionResponse: {
                         name: fc.name,
                         response: {
-                            result: toolResult, // Agora toolResult é um objeto { status: string }
+                            content: toolResult,
                         },
                     },
                 });

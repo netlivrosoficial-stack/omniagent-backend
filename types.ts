@@ -46,7 +46,6 @@ export interface AgentConfig {
 }
 
 export enum AppView {
-  LOGIN = 'LOGIN', // Adicionado
   DASHBOARD = 'DASHBOARD',
   SIMULATOR = 'SIMULATOR',
   CONFIGURATION = 'CONFIGURATION',

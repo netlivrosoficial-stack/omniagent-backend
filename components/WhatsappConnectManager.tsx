@@ -19,52 +19,30 @@ interface WhatsappConnectManagerProps {
 const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConnected, onUpdateStatus }) => {
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);
-    const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [userId, setUserId] = useState<string | null>(null);
 
     useEffect(() => {
-        // 1. Obter o ID do usuário primeiro
-        const getUserId = async () => {
-            setIsAuthLoading(true);
-            // Tenta obter o usuário autenticado
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
-            
-            if (authError) {
-                console.error("Supabase Auth Error:", authError);
-            }
-
-            if (user) {
-                setUserId(user.id);
-                setError(null);
-                console.log("Usuário autenticado encontrado:", user.id);
-                fetchSession(user.id);
-            } else {
-                // Se não houver usuário autenticado, tentamos buscar a sessão de qualquer forma
-                // para ver se o status 'connected' está no banco de dados.
-                console.log("Usuário não autenticado. Tentando buscar sessão de WhatsApp sem ID.");
-                // Não podemos buscar a sessão sem ID, então definimos o erro e terminamos.
-                setError("Usuário não autenticado. Por favor, faça login para gerenciar a conexão.");
-                setLoading(false);
-            }
-            setIsAuthLoading(false);
-        };
-        getUserId();
+        fetchSession();
     }, []);
     
     // Função para buscar o estado atual da sessão no Supabase
-    const fetchSession = async (id: string) => {
+    const fetchSession = async () => {
         setLoading(true);
         setError(null);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            setError("Usuário não autenticado.");
+            setLoading(false);
+            return;
+        }
         
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .select('*')
-            .eq('user_id', id)
+            .eq('user_id', user.id)
             .single();
             
         if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
-            console.error("Error fetching whatsapp session:", error);
             setError(error.message);
         } else if (data) {
             setSession(data as SessionData);
@@ -78,11 +56,6 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
 
     // Função para iniciar a conexão (chama a Edge Function)
     const startConnection = async () => {
-        if (!userId) {
-            setError("Usuário não autenticado. Por favor, faça login para iniciar a conexão.");
-            return;
-        }
-        
         setLoading(true);
         setError(null);
         
@@ -114,7 +87,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 });
                 // Simula a conexão automática após 5 segundos para fins de demonstração
                 setTimeout(() => {
-                    simulateConnectionSuccess(userId);
+                    simulateConnectionSuccess(authSession.access_token);
                 }, 5000);
             } else {
                 setError(data.error || 'Falha ao iniciar a conexão.');
@@ -128,13 +101,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     };
     
     // Função para simular a mudança de status para 'connected'
-    const simulateConnectionSuccess = async (id: string) => {
+    const simulateConnectionSuccess = async (token: string) => {
         // Em um ambiente real, isso seria um webhook do provedor de WhatsApp
         // Aqui, atualizamos o Supabase diretamente para simular o sucesso
         const { data, error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'connected' })
-            .eq('user_id', id) // Usando o ID do usuário
+            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id))
             .select()
             .single();
             
@@ -148,13 +121,11 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     }
     
     const disconnect = async () => {
-        if (!userId) return;
-        
         setLoading(true);
         const { error } = await supabase
             .from('whatsapp_sessions')
             .update({ status: 'disconnected', qr_code_data: null })
-            .eq('user_id', userId); // Usando o ID do usuário
+            .eq('user_id', supabase.auth.getUser().then(res => res.data.user?.id));
             
         if (error) {
             setError("Falha ao desconectar.");
@@ -169,17 +140,24 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const qrCodeData = session?.qr_code_data;
 
     const renderContent = () => {
-        // 1. Se estiver carregando a autenticação, mostramos o spinner
-        if (isAuthLoading) {
+        if (loading && !session) {
             return (
                 <div className="flex justify-center items-center py-10 text-blue-400">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                    Verificando autenticação...
+                    Carregando status da sessão...
                 </div>
             );
         }
         
-        // 2. Se estiver conectado, NUNCA mostramos o erro de autenticação.
+        if (error) {
+            return (
+                <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-3" />
+                    Erro: {error}
+                </div>
+            );
+        }
+
         if (currentStatus === 'connected') {
             return (
                 <div className="text-center py-4">
@@ -194,26 +172,6 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                         <LogOut className="w-4 h-4" />
                         <span>Desconectar</span>
                     </button>
-                </div>
-            );
-        }
-        
-        // 3. Se houver um erro E não estiver conectado, mostramos o erro.
-        if (error) {
-            return (
-                <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-3" />
-                    Erro: {error}
-                </div>
-            );
-        }
-        
-        // 4. Se estiver carregando e não tivermos dados de sessão, mostramos o spinner
-        if (loading && !session) {
-            return (
-                <div className="flex justify-center items-center py-10 text-blue-400">
-                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                    Carregando status da sessão...
                 </div>
             );
         }
@@ -238,7 +196,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                     </div>
                     <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Simulação: Conecta em 5s)</p>
                     <button 
-                        onClick={() => userId && fetchSession(userId)}
+                        onClick={fetchSession}
                         disabled={loading}
                         className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
                     >
@@ -255,7 +213,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 <p className="text-slate-400 text-sm mb-4">Inicie o processo de conexão para gerar um novo QR Code.</p>
                 <button 
                     onClick={startConnection}
-                    disabled={loading || !userId}
+                    disabled={loading}
                     className="flex items-center justify-center mx-auto space-x-2 bg-blue-600 text-white font-medium px-5 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-slate-600"
                 >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
