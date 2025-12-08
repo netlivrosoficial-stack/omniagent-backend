@@ -48,6 +48,9 @@ serve(async (req) => {
     // 2. Gerar QR Code e atualizar/inserir sessão
     const qrCodeData = generateMockQrCode(userId);
     
+    let sessionData: any = null;
+    let error: any = null;
+    
     // Tenta atualizar a sessão existente
     const { data: updateData, error: updateError } = await supabase
         .from('whatsapp_sessions')
@@ -57,14 +60,21 @@ serve(async (req) => {
             last_updated: new Date().toISOString()
         })
         .eq('user_id', userId)
-        .select();
+        .select()
+        .single(); // Usando .single()
 
-    let sessionData = updateData;
-    let error = updateError;
+    sessionData = updateData;
+    error = updateError;
 
-    // Se não houver sessão existente, insere uma nova
-    if (updateError && updateError.code === 'PGRST116') { // Código de 'no rows found'
+    // Se não houver sessão existente (updateError.code === 'PGRST116' ou updateData é null), insere uma nova
+    if ((updateError && updateError.code === 'PGRST116') || !sessionData) { 
         console.log(`[EF] No existing session found for user ${userId}. Inserting new session.`);
+        
+        // Se houve um erro PGRST116, limpamos o erro para tentar a inserção
+        if (updateError && updateError.code === 'PGRST116') {
+            error = null;
+        }
+        
         const { data: insertData, error: insertError } = await supabase
             .from('whatsapp_sessions')
             .insert([{ 
@@ -72,10 +82,12 @@ serve(async (req) => {
                 status: 'connecting', 
                 qr_code_data: qrCodeData 
             }])
-            .select();
+            .select()
+            .single(); // Usando .single()
+            
         sessionData = insertData;
         error = insertError;
-    } else if (updateData && updateData.length > 0) {
+    } else if (sessionData) {
         console.log(`[EF] Existing session updated for user ${userId}.`);
     }
 
@@ -84,15 +96,16 @@ serve(async (req) => {
         throw new Error(`Failed to manage session: ${error.message}`);
     }
     
-    if (!sessionData || sessionData.length === 0) {
-        console.error("[EF] Session data is empty after update/insert.");
+    // Agora sessionData deve ser um objeto único se for bem-sucedido
+    if (!sessionData) {
+        console.error("[EF] Session data is null after update/insert.");
         throw new Error("Failed to retrieve session data after connection attempt.");
     }
 
     return new Response(
       JSON.stringify({ 
         status: 'connecting', 
-        qrCode: qrCodeData,
+        qrCode: sessionData.qr_code_data, // Usando o dado retornado
         message: 'QR Code gerado com sucesso. Escaneie para conectar.'
       }),
       {
