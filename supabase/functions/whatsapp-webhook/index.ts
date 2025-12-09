@@ -43,30 +43,6 @@ const toolsDef: FunctionDeclaration[] = [
       required: ["category", "message"]
     }
   }
-  // Removendo ferramentas não essenciais para simplificar o payload e focar no erro
-  // {
-  //   name: "check_stock",
-  //   description: "Verifica o status do inventário de um produto.",
-  //   parameters: {
-  //     type: Type.OBJECT,
-  //     properties: {
-  //       productName: { type: Type.STRING, description: "Nome do produto" }
-  //     },
-  //     required: ["productName"]
-  //   }
-  // },
-  // {
-  //   name: "send_file",
-  //   description: "Envia um arquivo (PDF, Imagem) para o usuário.",
-  //   parameters: {
-  //     type: Type.OBJECT,
-  //     properties: {
-  //       fileType: { type: Type.STRING, description: "pdf, imagem, áudio, vídeo" },
-  //       fileName: { type: Type.STRING, description: "Nome do arquivo a ser enviado" }
-  //     },
-  //     required: ["fileType", "fileName"]
-  //   }
-  // }
 ];
 
 // Função para executar a chamada de ferramenta
@@ -97,12 +73,6 @@ async function handleToolCall(name: string, args: any): Promise<string> {
             // Lógica de simulação para criação de ticket
             return `Ticket de suporte criado com sucesso na categoria ${args.category}.`;
             
-        // case 'check_stock':
-        //     return `O produto ${args.productName} está em estoque.`;
-            
-        // case 'send_file':
-        //     return `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
-
         default:
             return `Ferramenta desconhecida: ${name}`;
     }
@@ -161,14 +131,15 @@ serve(async (req) => {
     let result;
     
     // Primeira chamada: Envia a mensagem de texto usando o formato 'parts'
-    // Verificação adicional para garantir que a mensagem não seja nula/vazia
     if (!message || typeof message !== 'string' || message.trim() === '') {
         throw new Error("A mensagem de entrada está vazia ou inválida.");
     }
     
     console.log(`[GEMINI] Sending message to model: "${message}"`);
     
-    result = await chat.sendMessage({ parts: [{ text: message }] });
+    // MUDANÇA AQUI: Usando o método sendMessage com o objeto de mensagem diretamente, 
+    // que é mais robusto e menos propenso a erros de tipagem de 'Part'.
+    result = await chat.sendMessage({ message: message });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
