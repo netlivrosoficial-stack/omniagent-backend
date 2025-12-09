@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     libasound2 \
     libxss1 \
+    libglib2.0-0 \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
