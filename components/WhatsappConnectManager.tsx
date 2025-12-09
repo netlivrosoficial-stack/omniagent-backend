@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
-// Importação ajustada para lidar com módulos CJS que não têm 'default' export explícito
-import * as QRCodeModule from 'qrcode.react'; 
-
-// Acessa o componente QRCode. Em ambientes CJS/ESM mistos, o componente é frequentemente aninhado.
-// Se o módulo for o componente, usamos ele. Caso contrário, tentamos o 'default'.
-// Vamos tentar uma extração mais agressiva, pois o objeto raiz falhou.
-const QRCode = (QRCodeModule as any).default || QRCodeModule;
 
 // Use environment variable for the real backend URL
 const WHATSAPP_BACKEND_URL = import.meta.env.VITE_WHATSAPP_BACKEND_URL;
@@ -29,6 +22,21 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pollingIntervalId, setPollingIntervalId] = useState<number | null>(null);
+    // Estado para armazenar o componente QRCode carregado dinamicamente
+    const [QRCodeComponent, setQRCodeComponent] = useState<React.ElementType | null>(null);
+
+    // Carregamento dinâmico do QRCode
+    useEffect(() => {
+        import('qrcode.react').then(module => {
+            // Tenta acessar o default, ou o objeto raiz, ou a propriedade QRCode (dependendo do empacotamento)
+            const LoadedQRCode = (module as any).default || module;
+            setQRCodeComponent(LoadedQRCode);
+        }).catch(err => {
+            console.error("Failed to load qrcode.react:", err);
+            setError("Falha ao carregar o componente QR Code.");
+        });
+    }, []);
+
 
     // Função para buscar o estado atual da sessão no Supabase
     const fetchSession = useCallback(async (showLoading = true) => {
@@ -259,6 +267,18 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         
         if (currentStatus === 'connecting') {
             if (qrCodeData) {
+                // Verifica se o componente QRCode foi carregado
+                if (!QRCodeComponent) {
+                    return (
+                        <div className="flex justify-center items-center py-10 text-blue-400">
+                            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                            Carregando componente QR Code...
+                        </div>
+                    );
+                }
+                
+                const QRCode = QRCodeComponent; // Alias para uso no JSX
+                
                 return (
                     <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4 text-center">
                         <h3 className="text-lg font-semibold text-white flex items-center justify-center">
