@@ -1,16 +1,36 @@
+# Use a imagem base Node.js
 FROM node:20-slim
 
-# Define o diretório de trabalho dentro do contêiner
-WORKDIR /usr/src/app
+# Instalar dependências do sistema necessárias para o Puppeteer (Chrome Headless)
+# Estas são as dependências mínimas para rodar o Chrome em um ambiente Linux sem cabeça.
+RUN apt-get update && apt-get install -y \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libgbm1 \
+    libgconf-2-4 \
+    libgtk-3-0 \
+    libxkbcommon-x11-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libxtst6 \
+    libasound2 \
+    libxss1 \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copia os arquivos de definição do projeto e instala as dependências
+# Definir o diretório de trabalho
+WORKDIR /app
+
+# Copiar package.json e instalar dependências
 COPY package*.json ./
-
-# Instala as dependências
 RUN npm install
 
-# Copia o restante dos arquivos da sua aplicação (incluindo server.js)
+# Copiar o restante do código
 COPY . .
 
-# Expõe a porta que o app usa
-EXPOSE 8080
+# Comando para iniciar o servidor
+CMD ["npm", "start"]
