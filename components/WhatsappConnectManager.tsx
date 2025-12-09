@@ -308,6 +308,12 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             />
                         </div>
                         <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
+                        
+                        {/* Adicionando a instrução para Code Linking */}
+                        <p className="text-xs text-slate-500 mt-3">
+                            Se preferir, no seu celular, clique em "Conectar com o número de telefone" para usar o código de 8 dígitos.
+                        </p>
+                        
                         <button 
                             onClick={() => fetchSession()}
                             disabled={loading}
