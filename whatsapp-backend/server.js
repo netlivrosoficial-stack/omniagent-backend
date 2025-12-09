@@ -95,7 +95,16 @@ function initializeClient(userId) {
     client = new Client({
         authStrategy: new LocalAuth({ clientId: userId }),
         puppeteer: {
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage', // Otimização de memória
+                '--disable-accelerated-2d-canvas', // Otimização de GPU/Canvas
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process', // Reduz o uso de memória
+                '--disable-gpu'
+            ],
         }
     });
 
