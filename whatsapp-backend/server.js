@@ -150,20 +150,32 @@ app.post('/api/whatsapp/start', async (req, res) => {
 app.post('/api/whatsapp/disconnect', async (req, res) => {
     const { userId } = req.body;
     
-    if (!userId || userId !== currentUserId) {
-        // If the server was restarted, currentUserId might be null, but we still try to destroy the client
-        // We rely on the DB update for final status.
+    if (!userId) {
+        return res.status(400).json({ error: 'Missing userId' });
     }
     
-    if (client && client.state !== 'disconnected') {
-        await client.destroy();
+    // 1. Tenta destruir o cliente WhatsApp se ele estiver ativo e for o cliente correto
+    if (client && currentUserId === userId && client.state !== 'disconnected') {
+        try {
+            await client.destroy();
+            console.log(`Client for user ${userId} destroyed.`);
+        } catch (e) {
+            console.error(`Error destroying client for user ${userId}:`, e);
+        }
         client = null;
         currentUserId = null;
+    } else if (currentUserId !== userId) {
+        console.log(`Warning: Disconnect request for user ${userId}, but current active client is for ${currentUserId}. Only updating DB status.`);
     }
     
-    // Ensure DB status is disconnected
-    await updateSessionStatus(userId, 'disconnected');
-    return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
+    // 2. Garante que o status no DB seja 'disconnected'
+    const dbUpdateSuccess = await updateSessionStatus(userId, 'disconnected');
+    
+    if (dbUpdateSuccess) {
+        return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
+    } else {
+        return res.status(500).json({ error: 'Failed to update session status in database.' });
+    }
 });
 
 // Endpoint to check status (optional, but useful)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { AgentConfig } from '../types';
 import { CheckCircle2 } from 'lucide-react';
 import ChannelConfigModal from './ChannelConfigModal';
@@ -89,7 +89,7 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
   const [selectedChannel, setSelectedChannel] = useState<{ id: keyof AgentConfig['channels'], title: string } | null>(null);
 
   // Função para atualizar o estado de conexão do canal (usada pelo modal)
-  const handleUpdateConnection = (channelId: keyof AgentConfig['channels'], status: boolean) => {
+  const handleUpdateConnection = useCallback((channelId: keyof AgentConfig['channels'], status: boolean) => {
       setConfig(prev => ({
           ...prev,
           channels: {
@@ -97,8 +97,8 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
               [channelId]: status,
           }
       }));
-  };
-  
+  }, [setConfig]); // Depende apenas de setConfig, que é estável
+
   const handleOpenModal = (channelId: keyof AgentConfig['channels'], channelTitle: string) => {
       setSelectedChannel({ id: channelId, title: channelTitle });
       setIsModalOpen(true);
@@ -149,7 +149,7 @@ const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ config, setConfig }) => {
               isConnected={config.channels[selectedChannel.id]}
               agentName={config.name}
               agentConfig={config}
-              onUpdateConnection={handleUpdateConnection} // Passando o callback
+              onUpdateConnection={handleUpdateConnection} // Passando o callback memorizado
           />
       )}
     </div>
