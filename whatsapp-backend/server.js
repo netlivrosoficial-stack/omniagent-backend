@@ -65,8 +65,10 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
 
 // Função para limpar os arquivos de sessão local
 async function clearLocalSession(userId) {
+    // O whatsapp-web.js usa .wwebjs_auth no diretório de trabalho
     const sessionPath = path.join(process.cwd(), '.wwebjs_auth', `session-${userId}`);
     try {
+        // Usamos force: true para garantir que não falhe se o diretório não existir
         await fs.rm(sessionPath, { recursive: true, force: true });
         console.log(`Local session data cleared for user ${userId} at ${sessionPath}`);
     } catch (e) {
@@ -79,7 +81,8 @@ async function clearLocalSession(userId) {
 function initializeClient(userId) {
     if (client && client.state !== 'disconnected') {
         console.log(`Client already running for user ${currentUserId}. Destroying old session.`);
-        client.destroy();
+        // Destruição síncrona aqui, o erro será capturado no .catch() do initialize
+        client.destroy(); 
     }
     
     currentUserId = userId;
@@ -170,10 +173,12 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     // 1. Tenta destruir o cliente WhatsApp se ele estiver ativo e for o cliente correto
     if (client && currentUserId === userId && client.state !== 'disconnected') {
         try {
+            // client.destroy() pode falhar se o cliente não estiver em um estado destrutível
             await client.destroy();
             console.log(`Client for user ${userId} destroyed.`);
         } catch (e) {
             console.error(`Error destroying client for user ${userId}:`, e);
+            // Não retornamos 500 aqui, apenas logamos e continuamos a limpeza
         }
         client = null;
         currentUserId = null;
@@ -190,6 +195,7 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     if (dbUpdateSuccess) {
         return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
     } else {
+        // Se a atualização do DB falhar, isso é um erro 500 legítimo
         return res.status(500).json({ error: 'Failed to update session status in database.' });
     }
 });

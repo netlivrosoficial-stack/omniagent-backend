@@ -170,9 +170,16 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 // O backend já atualizou o Supabase, buscamos o novo estado
                 await fetchSession();
             } else {
-                const data = await response.json();
-                console.error("[WhatsappManager] DISCONNECT Falhou. Resposta:", data);
-                setError(data.error || "Falha ao desconectar no servidor Fly.io.");
+                // Tenta ler o JSON de erro, mas se falhar, usa o status HTTP
+                let errorData = { error: `Erro HTTP ${response.status}: Falha interna no servidor Fly.io.` };
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    console.warn("Could not parse error JSON from backend:", e);
+                }
+                
+                console.error("[WhatsappManager] DISCONNECT Falhou. Resposta:", errorData);
+                setError(errorData.error || "Falha ao desconectar no servidor Fly.io.");
             }
             
         } catch (err) {
