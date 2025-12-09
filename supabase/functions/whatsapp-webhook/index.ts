@@ -156,7 +156,8 @@ serve(async (req) => {
     let result;
     
     // Primeira chamada: Envia a mensagem de texto
-    result = await chat.sendMessage({ message: message });
+    // CORREÇÃO: Usando 'parts' explicitamente para evitar o erro 'ContentUnion is required'
+    result = await chat.sendMessage({ parts: [{ text: message }] });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
