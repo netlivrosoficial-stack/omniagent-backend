@@ -2,8 +2,9 @@
 FROM node:20-slim
 
 # Instalar dependências do sistema necessárias para o Puppeteer (Chrome Headless)
-# Estas são as dependências mínimas para rodar o Chrome em um ambiente Linux sem cabeça.
+# Esta lista é mais abrangente para garantir que todas as bibliotecas compartilhadas sejam encontradas.
 RUN apt-get update && apt-get install -y \
+    # Core dependencies for Chromium
     libnss3 \
     libatk-bridge2.0-0 \
     libcups2 \
@@ -20,6 +21,10 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     libxss1 \
     libglib2.0-0 \
+    # Additional common dependencies for headless environments
+    libsecret-1-0 \
+    libappindicator3-1 \
+    # Clean up
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
