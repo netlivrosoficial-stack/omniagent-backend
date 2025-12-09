@@ -21,7 +21,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const [session, setSession] = useState<SessionData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [pollingInterval, setPollingInterval] = useState<number | null>(null);
+    const [pollingIntervalId, setPollingIntervalId] = useState<number | null>(null); // Renomeado para clareza
 
     // Função para buscar o estado atual da sessão no Supabase
     const fetchSession = useCallback(async (showLoading = true) => {
@@ -64,19 +64,30 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     useEffect(() => {
         fetchSession();
         
-        // Start polling every 5 seconds if not connected
-        const interval = setInterval(() => {
-            if (session?.status !== 'connected') {
-                fetchSession(false); // Fetch without setting loading state
-            }
-        }, 5000);
+        // Função para iniciar o polling
+        const startPolling = () => {
+            // Limpa o intervalo anterior se existir
+            if (pollingIntervalId) clearInterval(pollingIntervalId);
+            
+            const interval = setInterval(() => {
+                // Só faz polling se não estiver conectado
+                if (session?.status !== 'connected') {
+                    fetchSession(false); 
+                } else {
+                    // Se estiver conectado, para o polling
+                    if (pollingIntervalId) clearInterval(pollingIntervalId);
+                }
+            }, 5000);
+            
+            setPollingIntervalId(interval as unknown as number);
+        };
         
-        setPollingInterval(interval as unknown as number);
+        startPolling();
 
         return () => {
-            if (interval) clearInterval(interval);
+            if (pollingIntervalId) clearInterval(pollingIntervalId);
         };
-    }, [fetchSession, session?.status]);
+    }, [fetchSession, session?.status]); // Depende do status da sessão para parar/continuar o polling
     
     // Update parent state when local session changes, ONLY IF IT ACTUALLY CHANGED
     useEffect(() => {
@@ -105,6 +116,15 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         }
 
         try {
+            // Define o status localmente para 'connecting' imediatamente para feedback visual
+            setSession(prev => ({
+                ...(prev || {} as SessionData), // Garante que o objeto exista
+                user_id: user.id,
+                status: 'connecting',
+                qr_code_data: null,
+                last_updated: new Date().toISOString()
+            }));
+            
             console.log(`[WhatsappManager] Chamando START em: ${WHATSAPP_BACKEND_URL}/api/whatsapp/start`);
             // Chamada para o backend real no Fly.io
             const response = await fetch(`${WHATSAPP_BACKEND_URL}/api/whatsapp/start`, {
@@ -120,18 +140,17 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             if (response.ok) {
                 console.log("[WhatsappManager] START OK. Resposta:", data);
                 // O backend iniciou o processo e irá atualizar o Supabase.
-                // Iniciamos a busca imediata para pegar o QR code.
-                await fetchSession(); 
+                // O polling (useEffect) irá buscar o QR code.
             } else {
                 console.error("[WhatsappManager] START Falhou. Resposta:", data);
                 setError(data.error || 'Falha ao iniciar a conexão no servidor Fly.io.');
-                setSession(null);
+                setSession(null); // Volta para desconectado se falhar
             }
 
         } catch (err) {
             console.error("[WhatsappManager] Erro de rede ao chamar START:", err);
             setError('Erro de rede ao chamar o Fly.io Backend. Verifique a URL.');
-            setSession(null);
+            setSession(null); // Volta para desconectado se falhar
         } finally {
             setLoading(false);
         }
@@ -190,7 +209,6 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         } finally {
             // Se a chamada HTTP falhar, o loading deve ser desativado.
             // Se a chamada for bem-sucedida, fetchSession já lida com o loading.
-            // Deixamos aqui para garantir que o loading seja desativado em caso de erro de rede.
             setLoading(false); 
         }
     }
@@ -213,7 +231,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     }
 
     const renderContent = () => {
-        if (loading && !session) {
+        if (loading && currentStatus !== 'connecting') {
             return (
                 <div className="flex justify-center items-center py-10 text-blue-400">
                     <Loader2 className="w-6 h-6 animate-spin mr-2" />
@@ -249,35 +267,45 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             );
         }
         
-        if (currentStatus === 'connecting' && qrCodeData) {
-            // Em um ambiente real, você usaria uma biblioteca para renderizar o QR Code a partir do Base64
-            return (
-                <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4 text-center">
-                    <h3 className="text-lg font-semibold text-white flex items-center justify-center">
-                        <QrCode className="w-5 h-5 mr-2 text-blue-400" />
-                        Escaneie o QR Code
-                    </h3>
-                    <p className="text-slate-400 text-sm">
-                        Use o aplicativo WhatsApp no seu celular para escanear o código abaixo e conectar a sessão.
-                    </p>
-                    
-                    {/* Placeholder para o QR Code (simulando a exibição do Base64) */}
-                    <div className="w-40 h-40 bg-white mx-auto flex items-center justify-center rounded-md p-2">
-                        <p className="text-xs text-slate-800 break-all">
-                            {qrCodeData.substring(0, 50)}...
+        if (currentStatus === 'connecting') {
+            // Se estiver conectando, mostre o QR Code se ele existir, ou um spinner se ainda não chegou.
+            if (qrCodeData) {
+                return (
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4 text-center">
+                        <h3 className="text-lg font-semibold text-white flex items-center justify-center">
+                            <QrCode className="w-5 h-5 mr-2 text-blue-400" />
+                            Escaneie o QR Code
+                        </h3>
+                        <p className="text-slate-400 text-sm">
+                            Use o aplicativo WhatsApp no seu celular para escanear o código abaixo e conectar a sessão.
                         </p>
+                        
+                        {/* Placeholder para o QR Code (simulando a exibição do Base64) */}
+                        <div className="w-40 h-40 bg-white mx-auto flex items-center justify-center rounded-md p-2">
+                            <p className="text-xs text-slate-800 break-all">
+                                {qrCodeData.substring(0, 50)}...
+                            </p>
+                        </div>
+                        <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
+                        <button 
+                            onClick={() => fetchSession()}
+                            disabled={loading}
+                            className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            <span>Verificar Status Agora</span>
+                        </button>
                     </div>
-                    <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
-                    <button 
-                        onClick={() => fetchSession()}
-                        disabled={loading}
-                        className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                        <span>Verificar Status Agora</span>
-                    </button>
-                </div>
-            );
+                );
+            } else {
+                // Status 'connecting' mas sem QR Code (aguardando o backend salvar)
+                return (
+                    <div className="flex justify-center items-center py-10 text-blue-400">
+                        <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                        Iniciando sessão e aguardando QR Code...
+                    </div>
+                );
+            }
         }
 
         // Status: disconnected
