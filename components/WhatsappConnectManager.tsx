@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
-import QRCode from 'qrcode.react'; // Importando a biblioteca
+import { QRCode } from 'qrcode.react'; // Importação corrigida para nomeada
 
 // Use environment variable for the real backend URL
 const WHATSAPP_BACKEND_URL = import.meta.env.VITE_WHATSAPP_BACKEND_URL;
