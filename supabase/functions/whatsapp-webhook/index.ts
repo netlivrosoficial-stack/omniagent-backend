@@ -74,6 +74,7 @@ async function handleToolCall(name: string, args: any): Promise<string> {
         case 'save_lead':
             const { name: leadName, phone, origin, interestLevel } = args;
             
+            // Usando o cliente Supabase com a chave anônima (que agora tem permissão de INSERT via RLS)
             const { data, error } = await supabase
                 .from('leads')
                 .insert([{ 
@@ -155,8 +156,7 @@ serve(async (req) => {
     let toolCallsExecuted = false;
     let result;
     
-    // Primeira chamada: Envia a mensagem de texto
-    // CORREÇÃO: Usando 'parts' explicitamente para evitar o erro 'ContentUnion is required'
+    // Primeira chamada: Envia a mensagem de texto usando o formato 'parts'
     result = await chat.sendMessage({ parts: [{ text: message }] });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
