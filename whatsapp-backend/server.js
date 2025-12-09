@@ -54,6 +54,7 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
     };
 
     // Use upsert to handle both insert (if no session) and update
+    // Corrigido para usar a coluna 'user_id' como alvo de conflito, que agora tem uma restrição UNIQUE.
     const { data, error } = await supabase
         .from('whatsapp_sessions')
         .upsert({ user_id: userId, ...updatePayload }, { onConflict: 'user_id' })
