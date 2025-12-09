@@ -11,7 +11,7 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
   const [activeTab, setActiveTab] = useState<'text' | 'website' | 'video' | 'document'>('text');
   const [newText, setNewText] = useState('');
   const [newUrl, setNewUrl] = useState('');
-  const MAX_CHARS = 1024;
+  const MAX_CHARS = 8192; // Aumentado de 1024 para 8192
 
   const handleAddText = () => {
     if (!newText.trim()) return;
@@ -21,7 +21,7 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
       content: newText.trim()
     };
     setConfig(prev => ({
-      ...prev,
+      ...prev.trainingData,
       trainingData: [...prev.trainingData, newItem]
     }));
     setNewText('');
