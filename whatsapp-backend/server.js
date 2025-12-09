@@ -2,6 +2,8 @@ const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs/promises'); // Importando o módulo fs/promises
+const path = require('path'); // Importando o módulo path
 
 // --- Configuration ---
 const PORT = process.env.PORT || 8080;
@@ -61,6 +63,17 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
     return true;
 }
 
+// Função para limpar os arquivos de sessão local
+async function clearLocalSession(userId) {
+    const sessionPath = path.join(process.cwd(), '.wwebjs_auth', `session-${userId}`);
+    try {
+        await fs.rm(sessionPath, { recursive: true, force: true });
+        console.log(`Local session data cleared for user ${userId} at ${sessionPath}`);
+    } catch (e) {
+        console.error(`Failed to clear local session data for user ${userId}:`, e);
+    }
+}
+
 // --- WhatsApp Client Initialization ---
 
 function initializeClient(userId) {
@@ -102,7 +115,7 @@ function initializeClient(userId) {
     client.on('disconnected', (reason) => {
         console.log('Client was disconnected', reason);
         updateSessionStatus(userId, 'disconnected');
-        // Re-initialize if needed, but for now, just log and update status
+        // Note: We do NOT clear local session here, only on explicit user disconnect request.
     });
     
     client.on('message', async msg => {
@@ -168,8 +181,11 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
         console.log(`Warning: Disconnect request for user ${userId}, but current active client is for ${currentUserId}. Only updating DB status.`);
     }
     
-    // 2. Garante que o status no DB seja 'disconnected'
-    const dbUpdateSuccess = await updateSessionStatus(userId, 'disconnected');
+    // 2. Limpa os arquivos de sessão local para evitar reconexão automática
+    await clearLocalSession(userId);
+    
+    // 3. Garante que o status no DB seja 'disconnected'
+    const dbUpdateSuccess = await updateSessionStatus(userId, 'disconnected', null);
     
     if (dbUpdateSuccess) {
         return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
