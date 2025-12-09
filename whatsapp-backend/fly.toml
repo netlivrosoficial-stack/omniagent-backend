@@ -1,23 +1,31 @@
 app = "whatsapp-backend-silent-mountain-8291"
+kill_signal = "SIGINT"
+kill_timeout = "5s"
 primary_region = "gru"
-
-[build]
-  workdir = "/usr/src/app"
+processes = []
 
 [env]
-  PORT = "8080"
+PORT = "8080"
+
+[build]
+# Usamos o Dockerfile existente
+
+[mounts]
+source="whatsapp_data"
+destination="/home/node/.wwebjs_auth"
 
 [http_service]
-  internal_port = 8080
-  force_https = true
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 1
-  processes = ["app"]
+internal_port = 8080
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+min_machines_running = 1
+processes = ["app"]
 
-[[mounts]]
-  source="whatsapp_data"
-  destination="/usr/src/app/.wwebjs_auth"
+[[vm]]
+cpu_kind = "shared"
+cpus = 1
+memory_mb = 1024
 
 [processes]
-  app = "npm start"
+app = "node server.js" # Comando explícito para manter o processo ativo
