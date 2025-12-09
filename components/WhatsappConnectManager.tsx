@@ -4,8 +4,10 @@ import { supabase } from '../src/integrations/supabase/client';
 // Importação ajustada para lidar com módulos CJS que não têm 'default' export explícito
 import * as QRCodeModule from 'qrcode.react'; 
 
-// Acessa o componente QRCode. Em muitos bundlers, o componente é o 'default' ou o objeto raiz.
-// Vamos usar o objeto raiz, que é o que o qrcode.react geralmente exporta.
+// Acessa o componente QRCode. Em ambientes CJS/ESM mistos, o componente é frequentemente aninhado.
+// Se o módulo for o componente, usamos ele. Caso contrário, tentamos o 'default'.
+// O erro anterior sugere que o objeto raiz (QRCodeModule) é o que está sendo retornado.
+// Vamos tentar forçar o uso do 'default' e, se falhar, usar o objeto raiz.
 const QRCode = (QRCodeModule as any).default || QRCodeModule;
 
 // Use environment variable for the real backend URL
