@@ -58,9 +58,10 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
 
     if (error) {
         console.error(`Error updating session status for user ${userId}:`, error);
-        return false;
+        // Retorna o erro para que a rota de API possa detalhar o problema
+        return { success: false, error: error.message }; 
     }
-    return true;
+    return { success: true, data: data };
 }
 
 // Função para limpar os arquivos de sessão local
@@ -190,13 +191,13 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     await clearLocalSession(userId);
     
     // 3. Garante que o status no DB seja 'disconnected'
-    const dbUpdateSuccess = await updateSessionStatus(userId, 'disconnected', null);
+    const dbUpdateResult = await updateSessionStatus(userId, 'disconnected', null);
     
-    if (dbUpdateSuccess) {
+    if (dbUpdateResult.success) {
         return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
     } else {
-        // Se a atualização do DB falhar, isso é um erro 500 legítimo
-        return res.status(500).json({ error: 'Failed to update session status in database.' });
+        // Retorna o erro detalhado do Supabase
+        return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` });
     }
 });
 
