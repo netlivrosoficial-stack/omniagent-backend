@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
+import * as QRCodeModule from 'qrcode.react'; // Importa tudo
+
+// Acessa o componente QRCode, usando .default como fallback ou o módulo inteiro.
+// Isso resolve o erro de 'default' export que estava causando a falha.
+const QRCode = (QRCodeModule as any).default || QRCodeModule;
 
 // Use environment variable for the real backend URL
 const WHATSAPP_BACKEND_URL = import.meta.env.VITE_WHATSAPP_BACKEND_URL;
@@ -280,12 +285,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             Use o aplicativo WhatsApp no seu celular para escanear o código abaixo e conectar a sessão.
                         </p>
                         
-                        {/* Placeholder para o QR Code (simulando a exibição do Base64) */}
-                        <div className="w-40 h-40 bg-white mx-auto flex items-center justify-center rounded-md p-2">
-                            <p className="text-xs text-slate-800 break-all">
-                                {qrCodeData.substring(0, 50)}...
-                            </p>
+                        {/* Renderiza o QR Code usando qrcode.react */}
+                        <div className="w-40 h-40 mx-auto flex items-center justify-center rounded-md p-2 bg-white">
+                            {qrCodeData && (
+                                <QRCode value={qrCodeData} size={150} level="H" />
+                            )}
                         </div>
+                        
                         <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
                         <button 
                             onClick={() => fetchSession()}
