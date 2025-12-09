@@ -137,7 +137,7 @@ serve(async (req) => {
     
     console.log(`[GEMINI] Sending message to model: "${message}"`);
     
-    // CORREÇÃO: Usando a sintaxe explícita de 'parts' para a primeira mensagem
+    // Chamada inicial
     result = await chat.sendMessage({ parts: [{ text: message }] });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
@@ -152,11 +152,13 @@ serve(async (req) => {
                 const toolResult = await handleToolCall(fc.name, fc.args);
                 console.log(`[TOOL RESULT] Result for ${fc.name}: ${toolResult}`);
                 
+                // CORREÇÃO APLICADA AQUI: O objeto 'response' deve ter uma chave 'result' 
+                // que contém o resultado da função, e não 'content'.
                 toolResponses.push({
                     functionResponse: {
                         name: fc.name,
                         response: {
-                            content: toolResult,
+                            result: toolResult, // Usando 'result' em vez de 'content'
                         },
                     },
                 });
