@@ -1,8 +1,7 @@
 import React from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
 import WhatsappTestButton from './WhatsappTestButton';
-import WhatsappConnectManager from './WhatsappConnectManager';
-import ErrorBoundary from './ErrorBoundary'; // Importando o ErrorBoundary
+import WhatsappConnectManager from './WhatsappConnectManager'; // Importando o novo componente
 import { AgentConfig } from '../types';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
@@ -61,14 +60,14 @@ const ChannelConfigModal: React.FC<ChannelConfigModalProps> = ({
           </div>
 
           {channelId === 'whatsapp' && (
-            <ErrorBoundary>
+            <>
                 <WhatsappConnectManager 
                     isConnected={isConnected} 
                     onUpdateStatus={handleStatusUpdate}
                 />
                 
                 {isConnected && <WhatsappTestButton agentName={agentName} agentConfig={agentConfig} />}
-            </ErrorBoundary>
+            </>
           )}
           
           <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">

@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
       },
       // Forçar a otimização de dependências para evitar múltiplas instâncias do React
       optimizeDeps: {
-        include: ['react', 'react-dom', '@supabase/auth-ui-react', '@supabase/auth-ui-shared', 'qrcode.react'],
+        include: ['react', 'react-dom', '@supabase/auth-ui-react', '@supabase/auth-ui-shared'],
       }
     };
 });
