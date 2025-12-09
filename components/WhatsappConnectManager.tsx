@@ -274,24 +274,14 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             </div>
                             
                             <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
-                            <div className="flex justify-center space-x-4 mt-4">
-                                <button 
-                                    onClick={() => fetchSession()}
-                                    disabled={loading}
-                                    className="flex items-center justify-center space-x-2 text-slate-400 hover:text-white transition-colors"
-                                >
-                                    <RefreshCw className="w-4 h-4" />
-                                    <span>Verificar Status Agora</span>
-                                </button>
-                                <button 
-                                    onClick={disconnect}
-                                    disabled={loading}
-                                    className="flex items-center justify-center space-x-2 text-red-400 hover:text-red-300 transition-colors"
-                                >
-                                    <LogOut className="w-4 h-4" />
-                                    <span>Reiniciar Conexão</span>
-                                </button>
-                            </div>
+                            <button 
+                                onClick={() => fetchSession()}
+                                disabled={loading}
+                                className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                <span>Verificar Status Agora</span>
+                            </button>
                         </div>
                     );
                 }
@@ -324,24 +314,14 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             Se preferir, no seu celular, clique em "Conectar com o número de telefone" para usar o código de 8 dígitos.
                         </p>
                         
-                        <div className="flex justify-center space-x-4 mt-4">
-                            <button 
-                                onClick={() => fetchSession()}
-                                disabled={loading}
-                                className="flex items-center justify-center space-x-2 text-slate-400 hover:text-white transition-colors"
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                                <span>Verificar Status Agora</span>
-                            </button>
-                            <button 
-                                onClick={disconnect}
-                                disabled={loading}
-                                className="flex items-center justify-center space-x-2 text-red-400 hover:text-red-300 transition-colors"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                <span>Reiniciar Conexão</span>
-                            </button>
-                        </div>
+                        <button 
+                            onClick={() => fetchSession()}
+                            disabled={loading}
+                            className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            <span>Verificar Status Agora</span>
+                        </button>
                     </div>
                 );
             } else {
