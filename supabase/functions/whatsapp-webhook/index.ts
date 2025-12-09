@@ -120,9 +120,11 @@ serve(async (req) => {
         throw new Error("Agent configuration is missing in the request body.");
     }
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    // Tenta usar a variável de ambiente, se falhar, usa a chave do payload (para testes de frontend)
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || agentConfig.apiKey;
+    
     if (!GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY environment variable is not set.");
+        throw new Error("GEMINI_API_KEY não configurada. Por favor, configure a variável de ambiente no Supabase ou a chave de API no painel de Configuração do Agente.");
     }
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
