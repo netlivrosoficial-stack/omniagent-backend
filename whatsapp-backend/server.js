@@ -70,6 +70,27 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
     return { success: true, data: data };
 }
 
+// Função para buscar a AgentConfig do Supabase
+async function getAgentConfig(userId) {
+    const { data, error } = await supabase
+        .from('agent_configs')
+        .select('config')
+        .eq('user_id', userId)
+        .single();
+
+    if (error && error.code !== 'PGRST116') {
+        console.error(`[DB ERROR] Error fetching agent config for user ${userId}:`, error);
+        return null;
+    }
+    
+    if (data) {
+        return data.config;
+    }
+    
+    console.warn(`[DB WARNING] Agent config not found for user ${userId}. Using default/empty config.`);
+    return null; // Retorna null se não encontrar
+}
+
 // Função para limpar os arquivos de sessão local
 async function clearLocalSession(userId) {
     // O whatsapp-web.js usa .wwebjs_auth no diretório de trabalho
@@ -156,10 +177,59 @@ function initializeClient(userId) {
     });
     
     client.on('message', async msg => {
-        if (msg.body === '!ping') {
+        // Ignora mensagens de status, grupos, ou do próprio agente
+        if (msg.isStatus || msg.fromMe || msg.id.remote.endsWith('@g.us')) return;
+        
+        const senderNumber = msg.from;
+        const messageBody = msg.body;
+        
+        console.log(`[WWEB] Message received from ${senderNumber}: ${messageBody}`);
+
+        if (messageBody === '!ping') {
             msg.reply('pong');
-        } else {
-            // TODO: Implement call to Supabase whatsapp-webhook EF here
+            return;
+        }
+        
+        // 1. Buscar a configuração do agente
+        const agentConfig = await getAgentConfig(currentUserId);
+        
+        if (!agentConfig) {
+            console.error(`[WWEB] Agent config not available for user ${currentUserId}. Cannot process message.`);
+            msg.reply("Desculpe, a configuração do agente não está disponível. Por favor, verifique o painel de controle.");
+            return;
+        }
+        
+        // 2. Chamar a Edge Function do Supabase
+        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+        
+        try {
+            const response = await fetch(EDGE_FUNCTION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Não precisamos de Authorization aqui, pois a Edge Function não verifica JWT
+                },
+                body: JSON.stringify({
+                    message: messageBody,
+                    sender: senderNumber,
+                    agentConfig: agentConfig,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.response) {
+                console.log(`[WWEB] Edge Function Response: ${data.response}`);
+                // 3. Enviar a resposta de volta para o WhatsApp
+                msg.reply(data.response);
+            } else {
+                console.error(`[WWEB] Edge Function failed or returned no text response. Error: ${data.error || 'No response text.'}`);
+                msg.reply("Desculpe, o agente de IA encontrou um erro interno ao processar sua mensagem.");
+            }
+
+        } catch (error) {
+            console.error("[WWEB ERROR] Failed to call Edge Function:", error);
+            msg.reply("Desculpe, houve um erro de comunicação com o servidor de IA.");
         }
     });
 

@@ -7,76 +7,22 @@ import Exporter from './components/Exporter';
 import TrainingPanel from './components/TrainingPanel';
 import ChannelsPanel from './components/ChannelsPanel';
 import IntegrationsPanel from './components/IntegrationsPanel';
-import LeadsPanel from './components/LeadsPanel'; // Importando o novo painel
+import LeadsPanel from './components/LeadsPanel';
 import { AgentConfig, AppView } from './types';
-import { SUPREME_PROMPT_DEFAULT } from './constants';
 import { GeminiService } from './services/geminiService';
-import { useAuth } from './src/SessionContextProvider'; // Importando useAuth
+import { useAuth } from './src/SessionContextProvider';
+import { useAgentConfig } from './src/hooks/useAgentConfig'; // Importando o novo hook
+import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { user } = useAuth(); // Usando o hook de autenticação
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
-  const [config, setConfig] = useState<AgentConfig>(() => {
-    try {
-      const savedConfig = localStorage.getItem('agent-config');
-      if (savedConfig) {
-        const parsed = JSON.parse(savedConfig);
-        // Ensure necessary keys exist for backwards compatibility
-        if (!parsed.trainingData) parsed.trainingData = [];
-        if (!parsed.channels) {
-            parsed.channels = {
-                telegram: false,
-                whatsappCloud: false,
-                whatsapp: true,
-                messenger: false
-            };
-        }
-        if (!parsed.integrations) {
-            parsed.integrations = {
-                elevenLabs: false,
-                googleCalendar: false,
-                plugChat: false,
-                eVendi: false,
-            }
-        }
-        // Ensure apiKey exists
-        if (!parsed.apiKey) parsed.apiKey = '';
-        return parsed;
-      }
-    } catch (e) {
-      console.error("Failed to parse agent config from localStorage", e);
-    }
-    return {
-      name: 'OmniAgent',
-      personality: 'Professional',
-      apiKey: '', // Chave de API padrão vazia
-      modules: {
-        sales: true,
-        support: true,
-        onboarding: false,
-        audio: false,
-      },
-      channels: {
-        telegram: false,
-        whatsappCloud: false,
-        whatsapp: true,
-        messenger: false,
-      },
-      integrations: {
-        elevenLabs: false,
-        googleCalendar: false,
-        plugChat: false,
-        eVendi: false,
-      },
-      systemInstruction: SUPREME_PROMPT_DEFAULT,
-      trainingData: [],
-    };
-  });
+  // Usando o novo hook para gerenciar a configuração
+  const { config, setConfig, isLoading: isConfigLoading } = useAgentConfig();
 
   // Inicializa o serviço Gemini usando a chave da configuração.
   const geminiService = useMemo(() => {
-    // Só inicializa se houver chave de API e o usuário estiver logado (embora o index.tsx já garanta o login)
     if (!config.apiKey || !user) return null; 
     try {
         return new GeminiService(config.apiKey);
@@ -84,21 +30,31 @@ const App: React.FC = () => {
         console.error("Failed to initialize Gemini Service:", e);
         return null;
     }
-  }, [config.apiKey, user]); // Recria o serviço se a chave ou o usuário mudar
+  }, [config.apiKey, user]);
   
-  useEffect(() => {
-    localStorage.setItem('agent-config', JSON.stringify(config));
-  }, [config]);
+  // Removendo o useEffect de localStorage, agora a persistência é no hook.
+  // useEffect(() => {
+  //   localStorage.setItem('agent-config', JSON.stringify(config));
+  // }, [config]);
 
   
   const renderView = () => {
+    if (isConfigLoading) {
+        return (
+            <div className="min-h-[80vh] flex items-center justify-center text-blue-400">
+                <Loader2 className="w-8 h-8 animate-spin mr-3" />
+                Carregando configuração do agente...
+            </div>
+        );
+    }
+    
     switch (currentView) {
       case AppView.DASHBOARD:
         return <Dashboard />;
       case AppView.SIMULATOR:
         if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
         return <Simulator config={config} geminiService={geminiService} />;
-      case AppView.LEADS: // Novo caso
+      case AppView.LEADS:
         return <LeadsPanel />;
       case AppView.CONFIGURATION:
         return <ConfigPanel config={config} setConfig={setConfig} />;
