@@ -50,7 +50,7 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
     const updatePayload = {
         status: status,
         last_updated: new Date().toISOString(),
-        qr_code_data: qrCodeData,
+        qr_code_data: qrCodeData, // Usado para QR Code OU Código de 8 dígitos
     };
 
     console.log(`[DB] Attempting to update session for user ${userId} to status: ${status}`);
@@ -104,8 +104,8 @@ function initializeClient(userId) {
         '--no-zygote',
         '--single-process', 
         '--disable-gpu',
-        '--unlimited-storage', // Adicionado para garantir espaço para a sessão
-        '--disable-web-security' // Adicionado para evitar problemas de segurança de origem
+        '--unlimited-storage', 
+        '--disable-web-security' 
     ];
 
     client = new Client({
@@ -118,12 +118,27 @@ function initializeClient(userId) {
     client.on('qr', (qr) => {
         qrcode.generate(qr, { small: true });
         console.log('[WWEB] QR RECEIVED');
+        // O QR Code é o dado que o frontend usa para renderizar
         updateSessionStatus(userId, 'connecting', qr);
+    });
+    
+    // NOVO: Evento para Code Linking (conexão por número de telefone)
+    client.on('code', (code) => {
+        console.log('[WWEB] CODE RECEIVED:', code);
+        // Usamos o campo qr_code_data para armazenar o código de 8 dígitos
+        updateSessionStatus(userId, 'connecting', code);
+    });
+    
+    // NOVO: Evento para tela de carregamento (útil para feedback)
+    client.on('loading_screen', (percent, message) => {
+        console.log('LOADING SCREEN', percent, message);
+        // Não atualizamos o DB aqui, apenas logamos
     });
 
     client.on('ready', () => {
         console.log('[WWEB] Client is ready!');
-        updateSessionStatus(userId, 'connected');
+        // Limpa o qr_code_data/code quando conectado
+        updateSessionStatus(userId, 'connected', null); 
     });
 
     client.on('authenticated', (session) => {
@@ -132,23 +147,19 @@ function initializeClient(userId) {
 
     client.on('auth_failure', msg => {
         console.error('[WWEB] AUTHENTICATION FAILURE', msg);
-        updateSessionStatus(userId, 'disconnected');
+        updateSessionStatus(userId, 'disconnected', null);
     });
 
     client.on('disconnected', (reason) => {
         console.log('[WWEB] Client was disconnected. Reason:', reason); 
-        updateSessionStatus(userId, 'disconnected');
-        // Note: We do NOT clear local session here, only on explicit user disconnect request.
+        updateSessionStatus(userId, 'disconnected', null);
     });
     
     client.on('message', async msg => {
         if (msg.body === '!ping') {
             msg.reply('pong');
         } else {
-            // --- Message Relay to AI (Simplified for now) ---
             // TODO: Implement call to Supabase whatsapp-webhook EF here
-            // For now, we'll send a simple confirmation.
-            // msg.reply(`[AI] Recebi sua mensagem: "${msg.body}". Processando...`);
         }
     });
 
@@ -178,10 +189,10 @@ app.post('/api/whatsapp/start', async (req, res) => {
         await clearLocalSession(userId); 
         
         initializeClient(userId);
-        // O backend irá atualizar o Supabase de forma assíncrona com o QR code.
+        // O backend irá atualizar o Supabase de forma assíncrona com o QR code ou o código de 8 dígitos.
         return res.json({ 
             status: 'starting', 
-            message: 'WhatsApp client initialization started. Check Supabase for QR code updates.' 
+            message: 'WhatsApp client initialization started. Check Supabase for QR code/Code updates.' 
         });
     } catch (e) {
         console.error("Failed to start WhatsApp client:", e);
@@ -200,12 +211,10 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     // 1. Tenta destruir o cliente WhatsApp se ele estiver ativo e for o cliente correto
     if (client && currentUserId === userId && client.state !== 'disconnected') {
         try {
-            // client.destroy() pode falhar se o cliente não estiver em um estado destrutível
             await client.destroy();
             console.log(`Client for user ${userId} destroyed.`);
         } catch (e) {
             console.error(`Error destroying client for user ${userId}:`, e);
-            // Não retornamos 500 aqui, apenas logamos e continuamos a limpeza
         }
         client = null;
         currentUserId = null;
@@ -222,7 +231,6 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     if (dbUpdateResult.success) {
         return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
     } else {
-        // Retorna o erro detalhado do Supabase
         return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` });
     }
 });
@@ -252,5 +260,4 @@ app.get('/api/whatsapp/status/:userId', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`WhatsApp Backend running on port ${PORT}`);
     console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
-    // Note: We don't initialize the client here, only via the API call.
 });
