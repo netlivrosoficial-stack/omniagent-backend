@@ -278,7 +278,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             Escaneie o QR Code
                         </h3>
                         <p className="text-slate-400 text-sm">
-                            Use o aplicativo WhatsApp no seu celular para escanear o código abaixo e conectar a sessão.
+                            **IMPORTANTE:** Use o scanner dentro do aplicativo WhatsApp. Vá em **Configurações > Aparelhos Conectados > Conectar um Aparelho** para escanear o código abaixo.
                         </p>
                         
                         {/* Renderização do QR Code usando react-qr-code */}
