@@ -6,8 +6,7 @@ import * as QRCodeModule from 'qrcode.react';
 
 // Acessa o componente QRCode. Em ambientes CJS/ESM mistos, o componente é frequentemente aninhado.
 // Se o módulo for o componente, usamos ele. Caso contrário, tentamos o 'default'.
-// O erro anterior sugere que o objeto raiz (QRCodeModule) é o que está sendo retornado.
-// Vamos tentar forçar o uso do 'default' e, se falhar, usar o objeto raiz.
+// Vamos tentar uma extração mais agressiva, pois o objeto raiz falhou.
 const QRCode = (QRCodeModule as any).default || QRCodeModule;
 
 // Use environment variable for the real backend URL
