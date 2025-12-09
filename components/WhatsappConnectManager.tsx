@@ -71,10 +71,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         };
     }, [fetchSession, session?.status]);
     
-    // Update parent state when local session changes
+    // Update parent state when local session changes, ONLY IF IT ACTUALLY CHANGED
     useEffect(() => {
-        onUpdateStatus(session?.status === 'connected');
-    }, [session?.status, onUpdateStatus]);
+        const newStatus = session?.status === 'connected';
+        if (newStatus !== isConnected) {
+            onUpdateStatus(newStatus);
+        }
+    }, [session?.status, onUpdateStatus, isConnected]);
 
 
     // Função para iniciar a conexão (chama o Fly.io Backend)
