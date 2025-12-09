@@ -137,9 +137,8 @@ serve(async (req) => {
     
     console.log(`[GEMINI] Sending message to model: "${message}"`);
     
-    // MUDANÇA AQUI: Usando o método sendMessage com o objeto de mensagem diretamente, 
-    // que é mais robusto e menos propenso a erros de tipagem de 'Part'.
-    result = await chat.sendMessage({ message: message });
+    // CORREÇÃO: Usando a sintaxe explícita de 'parts' para a primeira mensagem
+    result = await chat.sendMessage({ parts: [{ text: message }] });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
