@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
-import * as QRCodeModule from 'qrcode.react'; // Alterado para importação de namespace
-const QRCode = (QRCodeModule as any).default || QRCodeModule; // Acessando o componente
+import * as QRCodeModule from 'qrcode.react'; // Importação de namespace
+// Usamos o .default se existir, caso contrário, usamos o módulo inteiro (fallback)
+const QRCode = (QRCodeModule as any).default || QRCodeModule; 
 
 // Use environment variable for the real backend URL
 const WHATSAPP_BACKEND_URL = import.meta.env.VITE_WHATSAPP_BACKEND_URL;
