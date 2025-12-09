@@ -53,6 +53,8 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
         qr_code_data: qrCodeData,
     };
 
+    console.log(`[DB] Attempting to update session for user ${userId} to status: ${status}`);
+
     // Use upsert to handle both insert (if no session) and update
     const { data, error } = await supabase
         .from('whatsapp_sessions')
@@ -60,10 +62,11 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
         .select();
 
     if (error) {
-        console.error(`Error updating session status for user ${userId}:`, error);
+        console.error(`[DB ERROR] Error updating session status for user ${userId}:`, error);
         // Retorna o erro para que a rota de API possa detalhar o problema
         return { success: false, error: error.message }; 
     }
+    console.log(`[DB] Session updated successfully for user ${userId}.`);
     return { success: true, data: data };
 }
 
@@ -110,26 +113,26 @@ function initializeClient(userId) {
 
     client.on('qr', (qr) => {
         qrcode.generate(qr, { small: true });
-        console.log('QR RECEIVED', qr);
+        console.log('[WWEB] QR RECEIVED');
         updateSessionStatus(userId, 'connecting', qr);
     });
 
     client.on('ready', () => {
-        console.log('Client is ready!');
+        console.log('[WWEB] Client is ready!');
         updateSessionStatus(userId, 'connected');
     });
 
     client.on('authenticated', (session) => {
-        console.log('AUTHENTICATED');
+        console.log('[WWEB] AUTHENTICATED');
     });
 
     client.on('auth_failure', msg => {
-        console.error('AUTHENTICATION FAILURE', msg);
+        console.error('[WWEB] AUTHENTICATION FAILURE', msg);
         updateSessionStatus(userId, 'disconnected');
     });
 
     client.on('disconnected', (reason) => {
-        console.log('Client was disconnected. Reason:', reason); // Adicionado log da razão
+        console.log('[WWEB] Client was disconnected. Reason:', reason); // Adicionado log da razão
         updateSessionStatus(userId, 'disconnected');
         // Note: We do NOT clear local session here, only on explicit user disconnect request.
     });
@@ -146,7 +149,7 @@ function initializeClient(userId) {
     });
 
     client.initialize().catch(err => {
-        console.error("Error initializing WhatsApp client:", err);
+        console.error("[WWEB ERROR] Error initializing WhatsApp client:", err);
         updateSessionStatus(userId, 'disconnected');
     });
 }
