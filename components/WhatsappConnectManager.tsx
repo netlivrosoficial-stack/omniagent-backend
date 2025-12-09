@@ -5,9 +5,22 @@ import { supabase } from '../src/integrations/supabase/client';
 // Use React.lazy para carregar o componente QRCode dinamicamente
 // Ajuste para lidar com a forma como o bundler resolve o default export de módulos CJS.
 const LazyQRCode = React.lazy(() => 
-    import('qrcode.react').then(module => ({ 
-        default: (module as any).default || module 
-    }))
+    import('qrcode.react').then(module => {
+        // O componente QRCode é o default export.
+        // Em alguns casos, o bundler pode envolver o default export em um objeto { default: Component }.
+        // Em outros, o próprio objeto 'module' é o componente.
+        // Vamos tentar extrair o default, que é o padrão esperado pelo React.lazy.
+        const QRCodeComponent = (module as any).default || module;
+        
+        // Se o componente for uma função ou classe (o que o React espera), retornamos.
+        if (typeof QRCodeComponent === 'function' || (QRCodeComponent && typeof QRCodeComponent === 'object' && '$$typeof' in QRCodeComponent)) {
+             return { default: QRCodeComponent };
+        }
+        
+        // Se a extração falhar, tentamos o objeto raiz (embora isso tenha causado o erro anterior, 
+        // vamos garantir que o retorno seja sempre um objeto com 'default').
+        return { default: (module as any).default };
+    })
 );
 
 // Use environment variable for the real backend URL
