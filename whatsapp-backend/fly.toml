@@ -2,7 +2,6 @@ app = "whatsapp-backend-silent-mountain-8291"
 kill_signal = "SIGINT"
 kill_timeout = "5s"
 primary_region = "gru"
-processes = []
 
 [env]
 PORT = "8080"
