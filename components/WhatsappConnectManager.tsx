@@ -1,3 +1,4 @@
+' por hífens nas instruções de leitura do QR Code.">
 import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
@@ -278,7 +279,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             Escaneie o QR Code
                         </h3>
                         <p className="text-slate-400 text-sm">
-                            **IMPORTANTE:** Use o scanner dentro do aplicativo WhatsApp. Vá em **Configurações > Aparelhos Conectados > Conectar um Aparelho** para escanear o código abaixo.
+                            **IMPORTANTE:** Use o scanner dentro do aplicativo WhatsApp. Vá em **Configurações - Aparelhos Conectados - Conectar um Aparelho** para escanear o código abaixo.
                         </p>
                         
                         {/* Renderização do QR Code usando react-qr-code */}
