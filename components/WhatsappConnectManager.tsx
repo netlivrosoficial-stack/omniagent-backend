@@ -42,12 +42,19 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             .eq('user_id', user.id)
             .single();
             
-        if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
-            setError(error.message);
-            setSession(null);
+        if (error) {
+            // Se o erro for "No rows found" (PGRST116), significa que a sessão foi limpa/desconectada.
+            if (error.code === 'PGRST116') {
+                setSession(null);
+            } else {
+                console.error("Error fetching session:", error);
+                setError(error.message);
+                setSession(null);
+            }
         } else if (data) {
             setSession(data as SessionData);
         } else {
+            // Caso data seja null (embora o erro PGRST116 deva capturar isso)
             setSession(null);
         }
         if (showLoading) setLoading(false);
@@ -160,7 +167,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             
             if (response.ok) {
                 console.log("[WhatsappManager] DISCONNECT OK.");
-                // O backend já atualizou o Supabase, apenas buscamos o novo estado
+                // O backend já atualizou o Supabase, buscamos o novo estado
                 await fetchSession();
             } else {
                 const data = await response.json();
@@ -172,7 +179,10 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             console.error("[WhatsappManager] Erro de rede ao chamar DISCONNECT:", err);
             setError('Erro de rede ao chamar o Fly.io Backend para desconexão.');
         } finally {
-            setLoading(false);
+            // Se a chamada HTTP falhar, o loading deve ser desativado.
+            // Se a chamada for bem-sucedida, fetchSession já lida com o loading.
+            // Deixamos aqui para garantir que o loading seja desativado em caso de erro de rede.
+            setLoading(false); 
         }
     }
 
