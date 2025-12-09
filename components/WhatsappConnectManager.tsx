@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
-import { QRCode } from 'qrcode.react'; // CORREÇÃO: Usando importação nomeada
 
 // Use environment variable for the real backend URL
 const WHATSAPP_BACKEND_URL = import.meta.env.VITE_WHATSAPP_BACKEND_URL;
@@ -281,14 +280,11 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                             Use o aplicativo WhatsApp no seu celular para escanear o código abaixo e conectar a sessão.
                         </p>
                         
-                        {/* Renderização do QR Code usando qrcode.react */}
+                        {/* Placeholder para o QR Code (simulando a exibição do Base64) */}
                         <div className="w-40 h-40 bg-white mx-auto flex items-center justify-center rounded-md p-2">
-                            <QRCode 
-                                value={qrCodeData} 
-                                size={140} 
-                                level="H" 
-                                renderAs="svg"
-                            />
+                            <p className="text-xs text-slate-800 break-all">
+                                {qrCodeData.substring(0, 50)}...
+                            </p>
                         </div>
                         <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
                         <button 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, CheckCircle2, Settings, QrCode } from 'lucide-react';
 import WhatsappTestButton from './WhatsappTestButton';
-import WhatsappConnectManager from './WhatsappConnectManager'; // Importação correta
+import WhatsappConnectManager from './WhatsappConnectManager'; // Importando o novo componente
 import { AgentConfig } from '../types';
 
 const SUPABASE_PROJECT_ID = "puyiyelqirhnzbcgiamf";
