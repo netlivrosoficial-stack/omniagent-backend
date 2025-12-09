@@ -152,13 +152,12 @@ serve(async (req) => {
                 const toolResult = await handleToolCall(fc.name, fc.args);
                 console.log(`[TOOL RESULT] Result for ${fc.name}: ${toolResult}`);
                 
-                // CORREÇÃO APLICADA AQUI: O objeto 'response' deve ter uma chave 'result' 
-                // que contém o resultado da função, e não 'content'.
+                // CORREÇÃO: Garante que a resposta da função esteja no formato Part[] esperado pelo Gemini
                 toolResponses.push({
                     functionResponse: {
                         name: fc.name,
                         response: {
-                            result: toolResult, // Usando 'result' em vez de 'content'
+                            result: toolResult,
                         },
                     },
                 });
