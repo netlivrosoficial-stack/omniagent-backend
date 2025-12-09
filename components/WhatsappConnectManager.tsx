@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
-import * as QRCodeModule from 'qrcode.react'; // Importação de namespace
-
-// Acessa o componente QRCode
-const QRCode = QRCodeModule.default || QRCodeModule;
+import QRCode from 'qrcode.react'; // Importação padrão direta
 
 // Use environment variable for the real backend URL
 const WHATSAPP_BACKEND_URL = import.meta.env.VITE_WHATSAPP_BACKEND_URL;
@@ -286,11 +283,8 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                         
                         {/* Renderiza o QR Code usando qrcode.react */}
                         <div className="w-40 h-40 mx-auto flex items-center justify-center rounded-md p-2 bg-white">
-                            {/* Verifica se QRCode é um componente válido antes de renderizar */}
-                            {typeof QRCode === 'function' ? (
+                            {qrCodeData && (
                                 <QRCode value={qrCodeData} size={150} level="H" />
-                            ) : (
-                                <p className="text-xs text-slate-800">Erro ao carregar o componente QR Code.</p>
                             )}
                         </div>
                         
