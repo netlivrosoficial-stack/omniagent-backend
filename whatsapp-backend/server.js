@@ -94,20 +94,24 @@ function initializeClient(userId) {
     
     currentUserId = userId;
     
-    // Use LocalAuth to persist session data locally on the Fly.io volume
+    // Argumentos do Puppeteer ajustados para máxima compatibilidade em ambientes Fly.io/Docker
+    const puppeteerArgs = [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', 
+        '--disable-accelerated-2d-canvas', 
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process', 
+        '--disable-gpu',
+        '--unlimited-storage', // Adicionado para garantir espaço para a sessão
+        '--disable-web-security' // Adicionado para evitar problemas de segurança de origem
+    ];
+
     client = new Client({
         authStrategy: new LocalAuth({ clientId: userId }),
         puppeteer: {
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage', // Otimização de memória
-                '--disable-accelerated-2d-canvas', // Otimização de GPU/Canvas
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process', // Reduz o uso de memória
-                '--disable-gpu'
-            ],
+            args: puppeteerArgs,
         }
     });
 
@@ -132,7 +136,7 @@ function initializeClient(userId) {
     });
 
     client.on('disconnected', (reason) => {
-        console.log('[WWEB] Client was disconnected. Reason:', reason); // Adicionado log da razão
+        console.log('[WWEB] Client was disconnected. Reason:', reason); 
         updateSessionStatus(userId, 'disconnected');
         // Note: We do NOT clear local session here, only on explicit user disconnect request.
     });
@@ -148,9 +152,14 @@ function initializeClient(userId) {
         }
     });
 
+    // Tratamento de erro mais robusto na inicialização
     client.initialize().catch(err => {
-        console.error("[WWEB ERROR] Error initializing WhatsApp client:", err);
-        updateSessionStatus(userId, 'disconnected');
+        console.error("[WWEB ERROR] Critical error during WhatsApp client initialization:", err);
+        // Garante que o status seja atualizado no DB em caso de falha crítica
+        updateSessionStatus(userId, 'disconnected', null); 
+        // Limpa o cliente global para permitir uma nova tentativa
+        client = null;
+        currentUserId = null;
     });
 }
 
@@ -165,6 +174,9 @@ app.post('/api/whatsapp/start', async (req, res) => {
     }
     
     try {
+        // Limpa a sessão local antes de iniciar para garantir um estado limpo
+        await clearLocalSession(userId); 
+        
         initializeClient(userId);
         // O backend irá atualizar o Supabase de forma assíncrona com o QR code.
         return res.json({ 
