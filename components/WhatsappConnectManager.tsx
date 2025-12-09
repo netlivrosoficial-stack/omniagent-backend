@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
 import * as QRCodeModule from 'qrcode.react'; // Importa tudo
-// O componente QRCode é o objeto importado inteiro ou está em .default.
-// Vamos usar uma variável para o componente.
+
+// O componente QRCode é o objeto importado inteiro.
+// Se o módulo não tem exportação 'default', o componente é o próprio módulo.
 const QRCode = (QRCodeModule as any).default || QRCodeModule;
 
 // Use environment variable for the real backend URL
