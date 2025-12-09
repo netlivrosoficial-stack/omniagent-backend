@@ -3,10 +3,10 @@ import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 
 import { supabase } from '../src/integrations/supabase/client';
 
 // Use React.lazy para carregar o componente QRCode dinamicamente
-// Simplificando a importação para garantir que o componente seja o default export.
+// Ajuste para lidar com a forma como o bundler resolve o default export de módulos CJS.
 const LazyQRCode = React.lazy(() => 
     import('qrcode.react').then(module => ({ 
-        default: (module as any).default 
+        default: (module as any).default || module 
     }))
 );
 
