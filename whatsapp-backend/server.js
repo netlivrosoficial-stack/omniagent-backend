@@ -11,6 +11,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Needed if we move AI logic here later
 
+console.log(`[CONFIG] SUPABASE_URL is set: ${!!SUPABASE_URL}`);
+console.log(`[CONFIG] SUPABASE_SERVICE_ROLE_KEY is set: ${!!SUPABASE_SERVICE_ROLE_KEY}`);
+
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.error("Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
     process.exit(1);
