@@ -2,7 +2,6 @@ app = "whatsapp-backend-silent-mountain-8291"
 primary_region = "gru"
 
 [build]
-  image = "node:20-slim"
   workdir = "/usr/src/app"
 
 [env]

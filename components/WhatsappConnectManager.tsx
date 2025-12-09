@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QrCode, Loader2, CheckCircle2, AlertTriangle, RefreshCw, LogOut } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
 
@@ -23,32 +23,8 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     const [error, setError] = useState<string | null>(null);
     const [pollingInterval, setPollingInterval] = useState<number | null>(null);
 
-    // --- Polling Setup ---
-    useEffect(() => {
-        fetchSession();
-        
-        // Start polling every 5 seconds if not connected
-        const interval = setInterval(() => {
-            if (session?.status !== 'connected') {
-                fetchSession(false); // Fetch without setting loading state
-            }
-        }, 5000);
-        
-        setPollingInterval(interval as unknown as number);
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, []);
-    
-    // Update parent state when local session changes
-    useEffect(() => {
-        onUpdateStatus(session?.status === 'connected');
-    }, [session?.status]);
-
-
     // Função para buscar o estado atual da sessão no Supabase
-    const fetchSession = async (showLoading = true) => {
+    const fetchSession = useCallback(async (showLoading = true) => {
         if (showLoading) setLoading(true);
         setError(null);
         
@@ -75,7 +51,31 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             setSession(null);
         }
         if (showLoading) setLoading(false);
-    };
+    }, []);
+
+    // --- Polling Setup ---
+    useEffect(() => {
+        fetchSession();
+        
+        // Start polling every 5 seconds if not connected
+        const interval = setInterval(() => {
+            if (session?.status !== 'connected') {
+                fetchSession(false); // Fetch without setting loading state
+            }
+        }, 5000);
+        
+        setPollingInterval(interval as unknown as number);
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [fetchSession, session?.status]);
+    
+    // Update parent state when local session changes
+    useEffect(() => {
+        onUpdateStatus(session?.status === 'connected');
+    }, [session?.status, onUpdateStatus]);
+
 
     // Função para iniciar a conexão (chama o Fly.io Backend)
     const startConnection = async () => {
@@ -130,7 +130,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     
     const disconnect = async () => {
         if (!WHATSAPP_BACKEND_URL) {
-            setError("VITE_WHATSAPP_BACKEND_URL não configurada.");
+            setError("VITE_WHATSAPP_BACKEND_URL não configurada. Não é possível desconectar.");
             return;
         }
         
@@ -175,6 +175,20 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
 
     const currentStatus = session?.status || 'disconnected';
     const qrCodeData = session?.qr_code_data;
+    
+    // Se a URL do backend não estiver configurada, mostre um erro prioritário
+    if (!WHATSAPP_BACKEND_URL) {
+        return (
+            <div className="bg-slate-800/50 p-4 rounded-xl border border-red-700">
+                <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" />
+                    <p className="text-sm">
+                        **ERRO DE CONFIGURAÇÃO:** A variável de ambiente `VITE_WHATSAPP_BACKEND_URL` não está definida. Por favor, adicione a URL do seu Fly.io (`https://whatsapp-backend-silent-mountain-8291.fly.dev`) ao arquivo `.env.local` e reinicie o aplicativo.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const renderContent = () => {
         if (loading && !session) {
