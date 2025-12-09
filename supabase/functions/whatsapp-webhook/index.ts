@@ -42,30 +42,31 @@ const toolsDef: FunctionDeclaration[] = [
       },
       required: ["category", "message"]
     }
-  },
-  {
-    name: "check_stock",
-    description: "Verifica o status do inventário de um produto.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        productName: { type: Type.STRING, description: "Nome do produto" }
-      },
-      required: ["productName"]
-    }
-  },
-  {
-    name: "send_file",
-    description: "Envia um arquivo (PDF, Imagem) para o usuário.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        fileType: { type: Type.STRING, description: "pdf, imagem, áudio, vídeo" },
-        fileName: { type: Type.STRING, description: "Nome do arquivo a ser enviado" }
-      },
-      required: ["fileType", "fileName"]
-    }
   }
+  // Removendo ferramentas não essenciais para simplificar o payload e focar no erro
+  // {
+  //   name: "check_stock",
+  //   description: "Verifica o status do inventário de um produto.",
+  //   parameters: {
+  //     type: Type.OBJECT,
+  //     properties: {
+  //       productName: { type: Type.STRING, description: "Nome do produto" }
+  //     },
+  //     required: ["productName"]
+  //   }
+  // },
+  // {
+  //   name: "send_file",
+  //   description: "Envia um arquivo (PDF, Imagem) para o usuário.",
+  //   parameters: {
+  //     type: Type.OBJECT,
+  //     properties: {
+  //       fileType: { type: Type.STRING, description: "pdf, imagem, áudio, vídeo" },
+  //       fileName: { type: Type.STRING, description: "Nome do arquivo a ser enviado" }
+  //     },
+  //     required: ["fileType", "fileName"]
+  //   }
+  // }
 ];
 
 // Função para executar a chamada de ferramenta
@@ -96,13 +97,11 @@ async function handleToolCall(name: string, args: any): Promise<string> {
             // Lógica de simulação para criação de ticket
             return `Ticket de suporte criado com sucesso na categoria ${args.category}.`;
             
-        case 'check_stock':
-            // Lógica de simulação para checagem de estoque
-            return `O produto ${args.productName} está em estoque.`;
+        // case 'check_stock':
+        //     return `O produto ${args.productName} está em estoque.`;
             
-        case 'send_file':
-            // Lógica de simulação para envio de arquivo
-            return `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
+        // case 'send_file':
+        //     return `Arquivo ${args.fileName} do tipo ${args.fileType} enviado ao usuário.`;
 
         default:
             return `Ferramenta desconhecida: ${name}`;
@@ -115,7 +114,10 @@ serve(async (req) => {
   }
   
   try {
-    const { message, sender, agentConfig } = await req.json();
+    const body = await req.json();
+    const { message, sender, agentConfig } = body;
+    
+    console.log(`[WEBHOOK] Received message: "${message}" from sender: ${sender}`);
     
     if (!agentConfig) {
         throw new Error("Agent configuration is missing in the request body.");
@@ -127,6 +129,8 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY não configurada. Por favor, configure a variável de ambiente no Supabase ou a chave de API no painel de Configuração do Agente.");
     }
+    
+    console.log(`[GEMINI] API Key status: ${GEMINI_API_KEY ? 'Present' : 'Missing'}`);
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
     
@@ -157,6 +161,13 @@ serve(async (req) => {
     let result;
     
     // Primeira chamada: Envia a mensagem de texto usando o formato 'parts'
+    // Verificação adicional para garantir que a mensagem não seja nula/vazia
+    if (!message || typeof message !== 'string' || message.trim() === '') {
+        throw new Error("A mensagem de entrada está vazia ou inválida.");
+    }
+    
+    console.log(`[GEMINI] Sending message to model: "${message}"`);
+    
     result = await chat.sendMessage({ parts: [{ text: message }] });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
@@ -167,7 +178,9 @@ serve(async (req) => {
             const toolResponses: Part[] = [];
             
             for (const fc of result.functionCalls) {
+                console.log(`[TOOL CALL] Executing tool: ${fc.name} with args: ${JSON.stringify(fc.args)}`);
                 const toolResult = await handleToolCall(fc.name, fc.args);
+                console.log(`[TOOL RESULT] Result for ${fc.name}: ${toolResult}`);
                 
                 toolResponses.push({
                     functionResponse: {
@@ -185,6 +198,7 @@ serve(async (req) => {
         } else {
             // O Gemini respondeu com texto final
             aiResponseText = result.text || "O agente processou a mensagem, mas não gerou uma resposta de texto.";
+            console.log(`[GEMINI] Final response text: ${aiResponseText}`);
             break;
         }
     }
@@ -205,6 +219,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Erro na Edge Function:", error);
+    // Retorna o erro com status 400 e a mensagem de erro
     return new Response(
       JSON.stringify({ error: error.message }),
       {
