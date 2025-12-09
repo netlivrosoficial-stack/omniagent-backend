@@ -1,20 +1,16 @@
-# Use the official Node.js image as the base image
 FROM node:20-slim
 
-# Set the working directory
-WORKDIR /app
+# Define o diretório de trabalho dentro do contêiner
+WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copia os arquivos de definição do projeto e instala as dependências
 COPY package*.json ./
 
-# Install dependencies
+# Instala as dependências
 RUN npm install
 
-# Copy the rest of the application code
+# Copia o restante dos arquivos da sua aplicação (incluindo server.js)
 COPY . .
 
-# Expose the port the app runs on
+# Expõe a porta que o app usa
 EXPOSE 8080
-
-# Define the command to run the app
-CMD ["npm", "start"]
