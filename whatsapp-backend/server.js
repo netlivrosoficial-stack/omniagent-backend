@@ -54,7 +54,6 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
     };
 
     // Use upsert to handle both insert (if no session) and update
-    // Corrigido para usar a coluna 'user_id' como alvo de conflito, que agora tem uma restrição UNIQUE.
     const { data, error } = await supabase
         .from('whatsapp_sessions')
         .upsert({ user_id: userId, ...updatePayload }, { onConflict: 'user_id' })
@@ -121,7 +120,7 @@ function initializeClient(userId) {
     });
 
     client.on('disconnected', (reason) => {
-        console.log('Client was disconnected', reason);
+        console.log('Client was disconnected. Reason:', reason); // Adicionado log da razão
         updateSessionStatus(userId, 'disconnected');
         // Note: We do NOT clear local session here, only on explicit user disconnect request.
     });
@@ -155,8 +154,7 @@ app.post('/api/whatsapp/start', async (req, res) => {
     
     try {
         initializeClient(userId);
-        // The QR code will be generated asynchronously and stored in Supabase.
-        // We return a success message immediately.
+        // O backend irá atualizar o Supabase de forma assíncrona com o QR code.
         return res.json({ 
             status: 'starting', 
             message: 'WhatsApp client initialization started. Check Supabase for QR code updates.' 
