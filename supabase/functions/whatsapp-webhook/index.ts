@@ -137,8 +137,8 @@ serve(async (req) => {
     
     console.log(`[GEMINI] Sending message to model: "${message}"`);
     
-    // Chamada inicial
-    result = await chat.sendMessage({ parts: [{ text: message }] });
+    // Chamada inicial - CORRIGIDO: Usar 'message' em vez de 'parts'
+    result = await chat.sendMessage({ message: [{ text: message }] });
     
     // Loop de Tool Calling (máximo 5 iterações para evitar loops infinitos)
     for (let i = 0; i < 5; i++) {
@@ -163,8 +163,8 @@ serve(async (req) => {
                 });
             }
             
-            // Envia as respostas das ferramentas de volta ao Gemini
-            result = await chat.sendMessage({ parts: toolResponses });
+            // Envia as respostas das ferramentas de volta ao Gemini - CORRIGIDO: Usar 'message' em vez de 'parts'
+            result = await chat.sendMessage({ message: toolResponses });
             
         } else {
             // O Gemini respondeu com texto final
