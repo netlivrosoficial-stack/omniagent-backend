@@ -21,34 +21,20 @@ auto_start_machines = true
 min_machines_running = 1 
 processes = ["app"] 
 
+  # ----------------------------------------------------
+  # CORREÇÃO CRÍTICA PARA A ESTABILIDADE (HEALTH CHECK)
+  # Adicionado diretamente ao http_service
+  # ----------------------------------------------------
+  [http_service.checks]
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "5s"
+    path = "/" 
+
 [[vm]]
 cpu_kind = "shared"
 cpus = 1
 memory_mb = 1024 
 
 [processes]
-app = "node server.js" 
-
-# ----------------------------------------------------
-# CORREÇÃO CRÍTICA PARA A ESTABILIDADE (HEALTH CHECK)
-# ----------------------------------------------------
-
-[[services]]
-  internal_port = 8080
-  protocol = "tcp"
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    force_https = true
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-
-  [[services.http_checks]]
-    interval = "10s"
-    timeout = "2s"
-    grace_period = "5s"
-    # Assumimos que a rota raiz ("/") responde se o servidor estiver rodando.
-    path = "/"
+app = "node server.js"
