@@ -7,6 +7,7 @@ const path = require('path'); // Importando o módulo path
 
 // --- Configuration ---
 const PORT = process.env.PORT || 8080;
+const HOST = '0.0.0.0'; // ESSENCIAL para o Fly.io
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Needed if we move AI logic here later
@@ -72,11 +73,9 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
 
 // Função para buscar a AgentConfig do Supabase
 async function getAgentConfig(userId) {
-    // CORREÇÃO: Valida se o userId é um UUID válido antes de consultar o DB
-    // Uma regex simples para UUID v4
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    
-    if (!userId || !uuidRegex.test(userId)) {
+    // Adicionando validação para evitar que strings inválidas (como 'null') cheguem ao DB
+    // Um UUID tem 36 caracteres. Se for muito curto ou não for string, ignoramos.
+    if (!userId || typeof userId !== 'string' || userId.length < 10) {
         console.warn(`[DB WARNING] Invalid or missing userId (${userId}). Cannot fetch agent config.`);
         return null;
     }
@@ -200,7 +199,6 @@ function initializeClient(userId) {
         }
         
         // 1. Buscar a configuração do agente
-        // Usamos currentUserId, que foi definido em initializeClient
         const agentConfig = await getAgentConfig(currentUserId);
         
         if (!agentConfig) {
@@ -317,8 +315,7 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     if (dbUpdateResult.success) {
         return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
     } else {
-        return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` }
-        );
+        return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` });
     }
 });
 
@@ -344,7 +341,7 @@ app.get('/api/whatsapp/status/:userId', async (req, res) => {
 });
 
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`WhatsApp Backend running on port ${PORT} on 0.0.0.0`);
+app.listen(PORT, HOST, () => {
+    console.log(`WhatsApp Backend running on http://${HOST}:${PORT}`);
     console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
 });
