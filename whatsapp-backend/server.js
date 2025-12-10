@@ -199,10 +199,13 @@ function initializeClient(userId) {
             return;
         }
         
+        console.log(`[WWEB] Agent config retrieved successfully for user ${currentUserId}.`);
+        
         // 2. Chamar a Edge Function do Supabase
         const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
         
         try {
+            console.log(`[WWEB] Calling Edge Function at: ${EDGE_FUNCTION_URL}`);
             const response = await fetch(EDGE_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
@@ -216,12 +219,15 @@ function initializeClient(userId) {
                 }),
             });
 
+            console.log(`[WWEB] Edge Function responded with status: ${response.status}`);
             const data = await response.json();
 
             if (response.ok && data.response) {
-                console.log(`[WWEB] Edge Function Response: ${data.response}`);
+                console.log(`[WWEB] Edge Function Response: ${data.response.substring(0, 50)}...`);
                 // 3. Enviar a resposta de volta para o WhatsApp
+                console.log(`[WWEB] Attempting to reply to message.`);
                 msg.reply(data.response);
+                console.log(`[WWEB] Reply sent successfully.`);
             } else {
                 console.error(`[WWEB] Edge Function failed or returned no text response. Error: ${data.error || 'No response text.'}`);
                 msg.reply("Desculpe, o agente de IA encontrou um erro interno ao processar sua mensagem.");
