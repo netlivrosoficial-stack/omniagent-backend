@@ -72,6 +72,15 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
 
 // Função para buscar a AgentConfig do Supabase
 async function getAgentConfig(userId) {
+    // CORREÇÃO: Valida se o userId é um UUID válido antes de consultar o DB
+    // Uma regex simples para UUID v4
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    
+    if (!userId || !uuidRegex.test(userId)) {
+        console.warn(`[DB WARNING] Invalid or missing userId (${userId}). Cannot fetch agent config.`);
+        return null;
+    }
+    
     const { data, error } = await supabase
         .from('agent_configs')
         .select('config')
@@ -191,6 +200,7 @@ function initializeClient(userId) {
         }
         
         // 1. Buscar a configuração do agente
+        // Usamos currentUserId, que foi definido em initializeClient
         const agentConfig = await getAgentConfig(currentUserId);
         
         if (!agentConfig) {
@@ -307,7 +317,8 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     if (dbUpdateResult.success) {
         return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
     } else {
-        return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` });
+        return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` }
+        );
     }
 });
 
@@ -333,7 +344,7 @@ app.get('/api/whatsapp/status/:userId', async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`WhatsApp Backend running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`WhatsApp Backend running on port ${PORT} on 0.0.0.0`);
     console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
 });

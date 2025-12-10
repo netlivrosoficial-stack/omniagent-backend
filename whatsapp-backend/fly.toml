@@ -13,18 +13,39 @@ PORT = "8080"
 source="whatsapp_data"
 destination="/home/node/.wwebjs_auth"
 
-[http_service]
-internal_port = 8080
-force_https = true
-auto_stop_machines = true
-auto_start_machines = true
-min_machines_running = 1
-processes = ["app"]
-
 [[vm]]
 cpu_kind = "shared"
 cpus = 1
-memory_mb = 1024
+memory_mb = 1024 
 
 [processes]
-app = "node server.js" # Comando explícito para manter o processo ativo
+app = "node server.js" 
+
+# Configuração de Serviço Consolidada (Resolve o erro "no processes set")
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  processes = ["app"] # Mapeamento de processo corrigido
+  
+  # Anti-Cold Start (Mantém a máquina ligada)
+  [services.concurrency]
+    type = "shared"
+    hard_limit = 25
+    soft_limit = 20
+  
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  # Health Check (Previne o ciclo de reinicialização de 10 minutos)
+  [[services.http_checks]]
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "5s"
+    # Usa a rota principal para o Fly.io verificar o status
+    path = "/"
