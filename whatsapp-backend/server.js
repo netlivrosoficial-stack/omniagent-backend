@@ -344,7 +344,7 @@ app.get('/api/whatsapp/status/:userId', async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`WhatsApp Backend running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`WhatsApp Backend running on port ${PORT} on 0.0.0.0`);
     console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
 });
