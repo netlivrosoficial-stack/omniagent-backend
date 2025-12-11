@@ -1,6 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, MessageSquare, Settings, FileJson, Bot, BookOpen, Share2, Puzzle, Users } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Settings, FileJson, Bot, BookOpen, Share2, Puzzle, Users, LogOut } from 'lucide-react';
 import { AppView } from '../types';
+import { supabase } from '../src/integrations/supabase/client';
 
 interface SidebarProps {
   currentView: AppView;
@@ -18,6 +19,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
     { id: AppView.INTEGRATIONS, icon: Puzzle, label: 'Integrações' },
     { id: AppView.EXPORTER, icon: FileJson, label: 'Exportar JSON' },
   ];
+  
+  const handleLogout = async () => {
+      await supabase.auth.signOut();
+  };
 
   return (
     <div className="w-20 lg:w-64 h-screen bg-slate-900 border-r border-slate-800 flex flex-col fixed left-0 top-0 z-50">
@@ -50,7 +55,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
       </nav>
 
       <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center justify-center lg:justify-start space-x-3 text-slate-500 text-xs">
+        {/* Botão de Logout */}
+        <button
+            onClick={handleLogout}
+            className="w-full flex items-center p-3 rounded-lg transition-all duration-200 group text-slate-400 hover:bg-red-800/50 hover:text-red-400"
+        >
+            <LogOut className="w-6 h-6 text-slate-400 group-hover:text-red-400" />
+            <span className="ml-3 font-medium hidden lg:block">Sair da Conta</span>
+        </button>
+        
+        <div className="flex items-center justify-center lg:justify-start space-x-3 text-slate-500 text-xs mt-4">
           <span>v1.0.0</span>
           <span className="hidden lg:inline">• Gemini 2.5</span>
         </div>
