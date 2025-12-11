@@ -328,6 +328,36 @@ app.get('/api/whatsapp/status/:userId', async (req, res) => {
 });
 
 
+// =======================================================
+// INÍCIO: Implementação do Graceful Shutdown (ALTERAÇÃO CHAVE)
+// Esta função garante que o cliente WhatsApp feche limpo em caso de desligamento do Fly.io.
+// =======================================================
+
+function shutdown(signal) {
+    console.log(`[SHUTDOWN] Recebido sinal de desligamento: ${signal}. Iniciando encerramento elegante...`);
+
+    // 1. Destrói o cliente WhatsApp de forma limpa
+    // 'client' está definido no escopo global e acessível aqui.
+    if (client && client.destroy) {
+        client.destroy();
+        console.log('[SHUTDOWN] Cliente WhatsApp destruído. Sessão fechada.');
+    }
+
+    // 2. Encerra o processo Node.js
+    setTimeout(() => {
+        process.exit(0);
+    }, 500); // Dá um tempo para os logs serem escritos/processados
+}
+
+// Monitorar os sinais de desligamento padrão do Fly.io (SIGINT e SIGTERM)
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+// =======================================================
+// FIM: Implementação do Graceful Shutdown
+// =======================================================
+
+
 app.listen(PORT, HOST, () => {
     console.log(`WhatsApp Backend running on http://${HOST}:${PORT}`);
     console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
