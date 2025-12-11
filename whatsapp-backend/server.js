@@ -7,6 +7,7 @@ const path = require('path'); // Importando o módulo path
 
 // --- Configuration ---
 const PORT = process.env.PORT || 8080;
+const HOST = '0.0.0.0'; // <<< CORREÇÃO DE INFRAESTRUTURA
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Needed if we move AI logic here later
@@ -327,7 +328,7 @@ app.get('/api/whatsapp/status/:userId', async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`WhatsApp Backend running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`WhatsApp Backend running on http://${HOST}:${PORT}`);
     console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
 });
