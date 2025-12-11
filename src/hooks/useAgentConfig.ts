@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AgentConfig } from '../types';
 import { supabase } from '../integrations/supabase/client';
-import { SUPREME_PROMPT_DEFAULT } from '../../constants'; // Corrigido o caminho de importação
+import { SUPREME_PROMPT_DEFAULT } from '../../constants';
 
 const DEFAULT_CONFIG: AgentConfig = {
     name: 'OmniAgent',
@@ -35,13 +35,19 @@ export const useAgentConfig = () => {
 
         if (data) {
             const loadedConfig = data.config as AgentConfig;
-            // Ensure necessary keys exist for backwards compatibility
-            if (!loadedConfig.trainingData) loadedConfig.trainingData = [];
-            if (!loadedConfig.channels) loadedConfig.channels = DEFAULT_CONFIG.channels;
-            if (!loadedConfig.integrations) loadedConfig.integrations = DEFAULT_CONFIG.integrations;
-            if (!loadedConfig.apiKey) loadedConfig.apiKey = '';
             
-            setConfig(loadedConfig);
+            // Mescla a configuração carregada com a configuração padrão para garantir que todas as chaves existam
+            const mergedConfig: AgentConfig = {
+                ...DEFAULT_CONFIG,
+                ...loadedConfig,
+                // Garante que sub-objetos (como modules, channels, integrations) também sejam mesclados
+                modules: { ...DEFAULT_CONFIG.modules, ...loadedConfig.modules },
+                channels: { ...DEFAULT_CONFIG.channels, ...loadedConfig.channels },
+                integrations: { ...DEFAULT_CONFIG.integrations, ...loadedConfig.integrations },
+                trainingData: loadedConfig.trainingData || [],
+            };
+            
+            setConfig(mergedConfig);
         } else {
             // 2. Se não houver no DB, usa o padrão e tenta salvar
             setConfig(DEFAULT_CONFIG);
