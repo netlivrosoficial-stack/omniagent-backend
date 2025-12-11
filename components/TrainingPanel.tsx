@@ -21,7 +21,7 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
       content: newText.trim()
     };
     setConfig(prev => ({
-      ...prev.trainingData,
+      ...prev, // CORREÇÃO: Espalhar o objeto 'prev' completo
       trainingData: [...prev.trainingData, newItem]
     }));
     setNewText('');
@@ -39,7 +39,7 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
       source: newUrl.trim()
     };
     setConfig(prev => ({
-      ...prev,
+      ...prev, // CORREÇÃO: Espalhar o objeto 'prev' completo
       trainingData: [...prev.trainingData, newItem]
     }));
     setNewUrl('');
