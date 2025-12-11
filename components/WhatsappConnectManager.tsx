@@ -264,38 +264,22 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         if (currentStatus === 'connecting') {
             if (qrCodeData) {
                 
-                if (isCodeLinking) {
-                    // Exibe o código de 8 dígitos
-                    return (
-                        <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4 text-center">
-                            <h3 className="text-lg font-semibold text-white flex items-center justify-center">
-                                <Link className="w-5 h-5 mr-2 text-blue-400" />
-                                Conexão por Código
-                            </h3>
-                            <p className="text-slate-400 text-sm">
-                                Use o aplicativo WhatsApp no seu celular para conectar um novo dispositivo e insira o código abaixo:
-                            </p>
-                            
-                            <div className="bg-slate-700 p-4 rounded-lg mx-auto max-w-xs">
-                                <p className="text-4xl font-mono font-bold text-blue-400 tracking-widest">{qrCodeData}</p>
-                            </div>
-                            
-                            <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
-                            <button 
-                                onClick={() => fetchSession()}
-                                disabled={loading}
-                                className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
-                            >
-                                <RefreshCw className="w-4 h-4" />
-                                <span>Verificar Status Agora</span>
-                            </button>
+                const connectionContent = isCodeLinking ? (
+                    <>
+                        <h3 className="text-lg font-semibold text-white flex items-center justify-center">
+                            <Link className="w-5 h-5 mr-2 text-blue-400" />
+                            Conexão por Código
+                        </h3>
+                        <p className="text-slate-400 text-sm">
+                            Use o aplicativo WhatsApp no seu celular para conectar um novo dispositivo e insira o código abaixo:
+                        </p>
+                        
+                        <div className="bg-slate-700 p-4 rounded-lg mx-auto max-w-xs">
+                            <p className="text-4xl font-mono font-bold text-blue-400 tracking-widest">{qrCodeData}</p>
                         </div>
-                    );
-                }
-                
-                // Exibe o QR Code (comportamento padrão)
-                return (
-                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4 text-center">
+                    </>
+                ) : (
+                    <>
                         <h3 className="text-lg font-semibold text-white flex items-center justify-center">
                             <QrCode className="w-5 h-5 mr-2 text-blue-400" />
                             Escaneie o QR Code
@@ -314,21 +298,39 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                             />
                         </div>
-                        <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
-                        
-                        {/* Adicionando a instrução para Code Linking */}
                         <p className="text-xs text-slate-500 mt-3">
                             Se preferir, no seu celular, clique em "Conectar com o número de telefone" para usar o código de 8 dígitos.
                         </p>
+                    </>
+                );
+                
+                // Exibe o QR Code ou Código de Conexão
+                return (
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 space-y-4 text-center">
+                        {connectionContent}
                         
-                        <button 
-                            onClick={() => fetchSession()}
-                            disabled={loading}
-                            className="mt-2 flex items-center justify-center mx-auto space-x-2 text-slate-400 hover:text-white transition-colors"
-                        >
-                            <RefreshCw className="w-4 h-4" />
-                            <span>Verificar Status Agora</span>
-                        </button>
+                        <p className="text-xs text-amber-400 mt-1">Aguardando conexão... (Verificando status a cada 5s)</p>
+                        
+                        <div className="flex justify-center space-x-4 pt-2 border-t border-slate-700/50">
+                            <button 
+                                onClick={() => fetchSession()}
+                                disabled={loading}
+                                className="flex items-center justify-center space-x-2 text-slate-400 hover:text-white transition-colors text-sm"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                <span>Verificar Status Agora</span>
+                            </button>
+                            
+                            {/* NOVO BOTÃO: Forçar Reinício da Conexão */}
+                            <button 
+                                onClick={disconnect}
+                                disabled={loading}
+                                className="flex items-center justify-center space-x-2 text-red-400 hover:text-red-300 transition-colors text-sm"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                <span>Forçar Reinício</span>
+                            </button>
+                        </div>
                     </div>
                 );
             } else {
