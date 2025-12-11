@@ -271,7 +271,7 @@ app.post('/api/whatsapp/start', async (req, res) => {
     }
 });
 
-// Endpoint to disconnect the session
+// Endpoint to disconnect the session (now also forces a restart/new QR code generation)
 app.post('/api/whatsapp/disconnect', async (req, res) => {
     const { userId } = req.body;
     
@@ -282,10 +282,16 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     // 1. Tenta destruir o cliente WhatsApp se ele estiver ativo e for o cliente correto
     if (client && currentUserId === userId && client.state !== 'disconnected') {
         try {
-            await client.destroy();
-            console.log(`Client for user ${userId} destroyed.`);
+            // Usando client.logout() para garantir que o WhatsApp seja notificado e a sessão seja encerrada remotamente.
+            await client.logout(); 
+            console.log(`Client for user ${userId} logged out.`);
         } catch (e) {
-            console.error(`Error destroying client for user ${userId}:`, e);
+            console.error(`Error logging out client for user ${userId}. Falling back to destroy:`, e);
+            try {
+                await client.destroy();
+            } catch (e2) {
+                console.error(`Error destroying client:`, e2);
+            }
         }
         client = null;
         currentUserId = null;
@@ -300,7 +306,11 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
     const dbUpdateResult = await updateSessionStatus(userId, 'disconnected', null);
     
     if (dbUpdateResult.success) {
-        return res.json({ status: 'disconnected', message: 'Session disconnected successfully.' });
+        // 4. NOVO: Inicia imediatamente uma nova sessão para gerar um novo QR Code
+        console.log(`[DISCONNECT] Successfully disconnected. Starting new session for user ${userId}.`);
+        initializeClient(userId);
+        
+        return res.json({ status: 'restarting', message: 'Session disconnected and new connection process started.' });
     } else {
         return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` });
     }

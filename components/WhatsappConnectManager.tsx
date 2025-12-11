@@ -164,7 +164,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
         }
         
         try {
-            console.log(`[WhatsappManager] Chamando DISCONNECT em: ${WHATSAPP_BACKEND_URL}/api/whatsapp/disconnect`);
+            console.log(`[WhatsappManager] Chamando DISCONNECT (Logout & Restart) em: ${WHATSAPP_BACKEND_URL}/api/whatsapp/disconnect`);
             const response = await fetch(`${WHATSAPP_BACKEND_URL}/api/whatsapp/disconnect`, {
                 method: 'POST',
                 headers: {
@@ -174,8 +174,15 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             });
             
             if (response.ok) {
-                console.log("[WhatsappManager] DISCONNECT OK.");
-                await fetchSession();
+                console.log("[WhatsappManager] DISCONNECT OK. Restarting session.");
+                // O backend agora inicia uma nova sessão imediatamente. 
+                // Atualizamos o estado local para 'connecting' para feedback imediato.
+                setSession(prev => ({
+                    ...(prev || {} as SessionData),
+                    status: 'connecting',
+                    qr_code_data: null,
+                    last_updated: new Date().toISOString()
+                }));
             } else {
                 let errorData: { error: string } = { error: `Erro HTTP ${response.status}: Falha interna no servidor Fly.io.` };
                 try {
@@ -248,7 +255,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                         className="mt-4 flex items-center justify-center mx-auto space-x-2 bg-red-600 text-white font-medium px-4 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors disabled:bg-slate-600"
                     >
                         <LogOut className="w-4 h-4" />
-                        <span>{loading ? 'Desconectando...' : 'Desconectar'}</span>
+                        <span>{loading ? 'Reiniciando Sessão...' : 'Encerrar Sessão e Reiniciar'}</span>
                     </button>
                 </div>
             );
