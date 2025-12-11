@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AgentConfig } from '../types';
 import { supabase } from '../integrations/supabase/client';
-import { SUPREME_PROMPT_DEFAULT } from '@/constants';
+import { SUPREME_PROMPT_DEFAULT } from '../../constants'; // Corrigido o caminho de importação
 
 const DEFAULT_CONFIG: AgentConfig = {
     name: 'OmniAgent',
