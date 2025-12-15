@@ -1,49 +1,72 @@
 const express = require('express');
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
 const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs/promises'); // Importando o módulo fs/promises
-const path = require('path'); // Importando o módulo path
+const axios = require('axios');
 
 // --- Configuration ---
-const PORT = process.env.PORT || 8080;
-const HOST = '0.0.0.0'; // <<< CORREÇÃO DE INFRAESTRUTURA
+const PORT = process.env.PORT || 3000; // Usando 3000 como padrão para EasyPanel/Hostinger
+const HOST = '0.0.0.0'; 
+
+// Supabase Config
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Needed if we move AI logic here later
+const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
-console.log(`[CONFIG] SUPABASE_URL is set: ${!!SUPABASE_URL}`);
-console.log(`[CONFIG] SUPABASE_SERVICE_ROLE_KEY is set: ${!!SUPABASE_SERVICE_ROLE_KEY}`);
+// Evolution API Config
+const EVOLUTION_BASE_URL = process.env.EVOLUTION_BASE_URL;
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
+const EVOLUTION_INSTANCE_ID = process.env.EVOLUTION_INSTANCE_ID;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.error("Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
-    process.exit(1);
+// Public URL of this backend (used for Evolution webhooks)
+const BACKEND_PUBLIC_URL = process.env.FLY_APP_URL; 
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !EVOLUTION_BASE_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE_ID || !BACKEND_PUBLIC_URL) {
+    console.error("Missing required environment variables for Supabase or Evolution API.");
+    // Não saímos do processo para permitir que o Hostinger/EasyPanel inicie o container, mas logamos o erro.
 }
 
-// Initialize Supabase client with Service Role Key to bypass RLS for server operations
+// Initialize Supabase client with Service Role Key
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-        persistSession: false,
-    }
+    auth: { persistSession: false }
 });
-
-// Global WhatsApp Client instance
-let client = null;
-let currentUserId = null; // Tracks which user owns the current session
 
 const app = express();
 app.use(express.json());
 
-// CORS setup (essential for Fly.io to communicate with the frontend)
+// CORS setup
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey');
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
     next();
 });
+
+// --- Evolution API Helpers ---
+
+const evolutionHeaders = {
+    'Content-Type': 'application/json',
+    'apikey': EVOLUTION_API_KEY,
+};
+
+async function callEvolutionApi(endpoint, method = 'GET', data = null) {
+    const url = `${EVOLUTION_BASE_URL}/instance/${EVOLUTION_INSTANCE_ID}${endpoint}`;
+    try {
+        const response = await axios({
+            method,
+            url,
+            headers: evolutionHeaders,
+            data,
+            timeout: 10000 // 10 seconds timeout
+        });
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.message || error.message;
+        console.error(`[EVOLUTION API ERROR] ${method} ${endpoint}:`, errorMessage);
+        throw new Error(`Evolution API call failed for ${endpoint}: ${errorMessage}`);
+    }
+}
 
 // --- Supabase Session Management Functions ---
 
@@ -51,12 +74,11 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
     const updatePayload = {
         status: status,
         last_updated: new Date().toISOString(),
-        qr_code_data: qrCodeData, // Usado para QR Code OU Código de 8 dígitos
+        qr_code_data: qrCodeData,
     };
 
     console.log(`[DB] Attempting to update session for user ${userId} to status: ${status}`);
 
-    // Use upsert to handle both insert (if no session) and update
     const { data, error } = await supabase
         .from('whatsapp_sessions')
         .upsert({ user_id: userId, ...updatePayload }, { onConflict: 'user_id' })
@@ -64,14 +86,11 @@ async function updateSessionStatus(userId, status, qrCodeData = null) {
 
     if (error) {
         console.error(`[DB ERROR] Error updating session status for user ${userId}:`, error);
-        // Retorna o erro para que a rota de API possa detalhar o problema
         return { success: false, error: error.message }; 
     }
-    console.log(`[DB] Session updated successfully for user ${userId}.`);
     return { success: true, data: data };
 }
 
-// Função para buscar a AgentConfig do Supabase
 async function getAgentConfig(userId) {
     const { data, error } = await supabase
         .from('agent_configs')
@@ -84,170 +103,31 @@ async function getAgentConfig(userId) {
         return null;
     }
     
-    if (data) {
-        return data.config;
-    }
-    
-    console.warn(`[DB WARNING] Agent config not found for user ${userId}. Using default/empty config.`);
-    return null; // Retorna null se não encontrar
+    return data ? data.config : null;
 }
 
-// Função para limpar os arquivos de sessão local
-async function clearLocalSession(userId) {
-    // O whatsapp-web.js usa .wwebjs_auth no diretório de trabalho
-    const sessionPath = path.join(process.cwd(), '.wwebjs_auth', `session-${userId}`);
+// Function to register the webhook URL with Evolution API
+async function registerWebhook() {
+    const webhookUrl = `${BACKEND_PUBLIC_URL}/webhook`;
+    console.log(`[EVOLUTION] Registering webhook URL: ${webhookUrl}`);
+    
     try {
-        // Usamos force: true para garantir que não falhe se o diretório não existir
-        await fs.rm(sessionPath, { recursive: true, force: true });
-        console.log(`Local session data cleared for user ${userId} at ${sessionPath}`);
+        // Evolution API endpoint to set webhooks
+        const response = await callEvolutionApi('/webhook', 'POST', {
+            webhookUrl: webhookUrl,
+            // Eventos essenciais para o fluxo:
+            enabledEvents: ["MESSAGES_UPDATE", "QRCODE_UPDATED", "CONNECTION_UPDATE"] 
+        });
+        console.log("[EVOLUTION] Webhook registered successfully.");
+        return response;
     } catch (e) {
-        console.error(`Failed to clear local session data for user ${userId}:`, e);
+        console.error("[EVOLUTION] Failed to register webhook. This might prevent message reception.", e.message);
     }
-}
-
-// --- WhatsApp Client Initialization ---
-
-function initializeClient(userId) {
-    if (client && client.state !== 'disconnected') {
-        console.log(`Client already running for user ${currentUserId}. Destroying old session.`);
-        // Destruição síncrona aqui, o erro será capturado no .catch() do initialize
-        client.destroy(); 
-    }
-    
-    currentUserId = userId;
-    
-    // Argumentos do Puppeteer ajustados para máxima compatibilidade em ambientes Fly.io/Docker
-    const puppeteerArgs = [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', 
-        '--disable-accelerated-2d-canvas', 
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process', 
-        '--disable-gpu',
-        '--unlimited-storage', 
-        '--disable-web-security' 
-    ];
-
-    client = new Client({
-        authStrategy: new LocalAuth({ clientId: userId }),
-        puppeteer: {
-            args: puppeteerArgs,
-        }
-    });
-
-    client.on('qr', (qr) => {
-        qrcode.generate(qr, { small: true });
-        console.log('[WWEB] QR RECEIVED');
-        // O QR Code é o dado que o frontend usa para renderizar
-        updateSessionStatus(userId, 'connecting', qr);
-    });
-    
-    // NOVO: Evento para Code Linking (conexão por número de telefone)
-    client.on('code', (code) => {
-        console.log('[WWEB] CODE RECEIVED:', code);
-        // Usamos o campo qr_code_data para armazenar o código de 8 dígitos
-        updateSessionStatus(userId, 'connecting', code);
-    });
-    
-    // NOVO: Evento para tela de carregamento (útil para feedback)
-    client.on('loading_screen', (percent, message) => {
-        console.log('LOADING SCREEN', percent, message);
-        // Não atualizamos o DB aqui, apenas logamos
-    });
-
-    client.on('ready', () => {
-        console.log('[WWEB] Client is ready!');
-        // Limpa o qr_code_data/code quando conectado
-        updateSessionStatus(userId, 'connected', null); 
-    });
-
-    client.on('authenticated', (session) => {
-        console.log('[WWEB] AUTHENTICATED');
-    });
-
-    client.on('auth_failure', msg => {
-        console.error('[WWEB] AUTHENTICATION FAILURE', msg);
-        updateSessionStatus(userId, 'disconnected', null);
-    });
-
-    client.on('disconnected', (reason) => {
-        console.log('[WWEB] Client was disconnected. Reason:', reason); 
-        updateSessionStatus(userId, 'disconnected', null);
-    });
-    
-    client.on('message', async msg => {
-        // Ignora mensagens de status, grupos, ou do próprio agente
-        if (msg.isStatus || msg.fromMe || msg.id.remote.endsWith('@g.us')) return;
-        
-        const senderNumber = msg.from;
-        const messageBody = msg.body;
-        
-        console.log(`[WWEB] Message received from ${senderNumber}: ${messageBody}`);
-
-        if (messageBody === '!ping') {
-            msg.reply('pong');
-            return;
-        }
-        
-        // 1. Buscar a configuração do agente
-        const agentConfig = await getAgentConfig(currentUserId);
-        
-        if (!agentConfig) {
-            console.error(`[WWEB] Agent config not available for user ${currentUserId}. Cannot process message.`);
-            msg.reply("Desculpe, a configuração do agente não está disponível. Por favor, verifique o painel de controle.");
-            return;
-        }
-        
-        // 2. Chamar a Edge Function do Supabase
-        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
-        
-        try {
-            const response = await fetch(EDGE_FUNCTION_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Não precisamos de Authorization aqui, pois a Edge Function não verifica JWT
-                },
-                body: JSON.stringify({
-                    message: messageBody,
-                    sender: senderNumber,
-                    agentConfig: agentConfig,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.response) {
-                console.log(`[WWEB] Edge Function Response: ${data.response}`);
-                // 3. Enviar a resposta de volta para o WhatsApp
-                msg.reply(data.response);
-            } else {
-                console.error(`[WWEB] Edge Function failed or returned no text response. Error: ${data.error || 'No response text.'}`);
-                msg.reply("Desculpe, o agente de IA encontrou um erro interno ao processar sua mensagem.");
-            }
-
-        } catch (error) {
-            console.error("[WWEB ERROR] Failed to call Edge Function:", error);
-            msg.reply("Desculpe, houve um erro de comunicação com o servidor de IA.");
-        }
-    });
-
-    // Tratamento de erro mais robusto na inicialização
-    client.initialize().catch(err => {
-        console.error("[WWEB ERROR] Critical error during WhatsApp client initialization:", err);
-        // Garante que o status seja atualizado no DB em caso de falha crítica
-        updateSessionStatus(userId, 'disconnected', null); 
-        // Limpa o cliente global para permitir uma nova tentativa
-        client = null;
-        currentUserId = null;
-    });
 }
 
 // --- API Endpoints ---
 
-// Endpoint to start the connection process
+// Endpoint to start the connection process (Get QR Code)
 app.post('/api/whatsapp/start', async (req, res) => {
     const { userId } = req.body;
     
@@ -256,22 +136,33 @@ app.post('/api/whatsapp/start', async (req, res) => {
     }
     
     try {
-        // Limpa a sessão local antes de iniciar para garantir um estado limpo
-        await clearLocalSession(userId); 
+        // 1. Call Evolution API to start the instance connection
+        const evolutionResponse = await callEvolutionApi('/connect', 'POST');
         
-        initializeClient(userId);
-        // O backend irá atualizar o Supabase de forma assíncrona com o QR code ou o código de 8 dígitos.
+        // 2. Check if QR code or status is immediately available
+        let qrCodeData = evolutionResponse.qrcode || evolutionResponse.code || null;
+        let status = 'connecting';
+        
+        if (evolutionResponse.state === 'CONNECTED') {
+            status = 'connected';
+            qrCodeData = null;
+        }
+        
+        // 3. Update Supabase session status
+        await updateSessionStatus(userId, status, qrCodeData);
+        
         return res.json({ 
             status: 'starting', 
-            message: 'WhatsApp client initialization started. Check Supabase for QR code/Code updates.' 
+            message: 'Evolution API connection process started.',
+            evolutionResponse: evolutionResponse
         });
     } catch (e) {
-        console.error("Failed to start WhatsApp client:", e);
-        return res.status(500).json({ error: 'Failed to start WhatsApp client.' });
+        console.error("Failed to start Evolution API client:", e);
+        return res.status(500).json({ error: e.message });
     }
 });
 
-// Endpoint to disconnect the session (now also forces a restart/new QR code generation)
+// Endpoint to disconnect the session (Logout)
 app.post('/api/whatsapp/disconnect', async (req, res) => {
     const { userId } = req.body;
     
@@ -279,96 +170,181 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
         return res.status(400).json({ error: 'Missing userId' });
     }
     
-    // 1. Tenta destruir o cliente WhatsApp se ele estiver ativo e for o cliente correto
-    if (client && currentUserId === userId && client.state !== 'disconnected') {
-        try {
-            // Usando client.logout() para garantir que o WhatsApp seja notificado e a sessão seja encerrada remotamente.
-            await client.logout(); 
-            console.log(`Client for user ${userId} logged out.`);
-        } catch (e) {
-            console.error(`Error logging out client for user ${userId}. Falling back to destroy:`, e);
-            try {
-                await client.destroy();
-            } catch (e2) {
-                console.error(`Error destroying client:`, e2);
+    try {
+        // 1. Call Evolution API to disconnect/logout
+        await callEvolutionApi('/disconnect', 'DELETE');
+        console.log(`Evolution instance ${EVOLUTION_INSTANCE_ID} disconnected.`);
+        
+        // 2. Update Supabase status to disconnected
+        const dbUpdateResult = await updateSessionStatus(userId, 'disconnected', null);
+        
+        if (dbUpdateResult.success) {
+            // 3. Immediately restart the connection process to generate a new QR code
+            console.log(`[DISCONNECT] Successfully disconnected. Starting new session for user ${userId}.`);
+            
+            // Call the start endpoint logic internally
+            const evolutionResponse = await callEvolutionApi('/connect', 'POST');
+            
+            let qrCodeData = evolutionResponse.qrcode || evolutionResponse.code || null;
+            let status = 'connecting';
+            
+            if (evolutionResponse.state === 'CONNECTED') {
+                status = 'connected';
+                qrCodeData = null;
+            }
+            
+            await updateSessionStatus(userId, status, qrCodeData);
+            
+            return res.json({ status: 'restarting', message: 'Session disconnected and new connection process started.' });
+        } else {
+            return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` });
+        }
+    } catch (e) {
+        console.error("Failed to disconnect Evolution API client:", e);
+        return res.status(500).json({ error: e.message });
+    }
+});
+
+// --- Evolution API Webhook Receiver ---
+app.post('/webhook', async (req, res) => {
+    const events = req.body;
+    
+    if (!Array.isArray(events) || events.length === 0) {
+        return res.status(200).send('No events received.');
+    }
+    
+    for (const event of events) {
+        const { event: eventName, instance, data } = event;
+        
+        // Evolution API usa 'instanceName' para identificar a instância, que deve ser o userId
+        const userId = instance.instanceName; 
+        
+        if (!userId) {
+            console.error("[WEBHOOK] Event received without instanceName (userId). Skipping.");
+            continue;
+        }
+
+        console.log(`[WEBHOOK] Received event: ${eventName} for user: ${userId}`);
+
+        // 1. Handle Connection Status Updates (QR Code, Connected, Disconnected)
+        if (eventName === 'QRCODE_UPDATED' || eventName === 'CONNECTION_UPDATE') {
+            let status = 'connecting';
+            let qrCodeData = null;
+            
+            if (data.state === 'CONNECTED') {
+                status = 'connected';
+            } else if (data.state === 'DISCONNECTED') {
+                status = 'disconnected';
+            } else if (data.qrcode) {
+                qrCodeData = data.qrcode;
+            } else if (data.code) {
+                qrCodeData = data.code; // Code linking
+            }
+            
+            await updateSessionStatus(userId, status, qrCodeData);
+        }
+
+        // 2. Handle Incoming Messages
+        if (eventName === 'MESSAGES_UPDATE' && data.messages && data.messages.length > 0) {
+            for (const msg of data.messages) {
+                // Ignora mensagens de status, grupos, ou mensagens enviadas pelo bot
+                if (msg.key.fromMe || msg.key.remoteJid.endsWith('@g.us')) continue;
+                
+                const senderNumber = msg.key.remoteJid;
+                const messageBody = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+                
+                if (!messageBody) continue; // Apenas processa mensagens de texto
+
+                console.log(`[WEBHOOK] Message received from ${senderNumber}: ${messageBody}`);
+
+                // A Evolution API usa o número completo (ex: 5511999999999@s.whatsapp.net)
+                const senderNumberClean = senderNumber.split('@')[0]; 
+
+                // 2.1. Buscar a configuração do agente
+                const agentConfig = await getAgentConfig(userId);
+                
+                if (!agentConfig) {
+                    console.error(`[WEBHOOK] Agent config not available for user ${userId}. Cannot process message.`);
+                    // Envia mensagem de erro de volta via Evolution API
+                    await callEvolutionApi('/send/text', 'POST', {
+                        number: senderNumberClean, 
+                        textMessage: {
+                            text: "Desculpe, a configuração do agente não está disponível. Por favor, verifique o painel de controle."
+                        }
+                    });
+                    continue;
+                }
+                
+                // 2.2. Chamar a Edge Function do Supabase
+                try {
+                    const response = await fetch(EDGE_FUNCTION_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: messageBody,
+                            sender: senderNumber,
+                            agentConfig: agentConfig,
+                        }),
+                    });
+
+                    const aiData = await response.json();
+
+                    if (response.ok && aiData.response) {
+                        console.log(`[WEBHOOK] Edge Function Response: ${aiData.response}`);
+                        // 2.3. Enviar a resposta de volta usando a Evolution API
+                        await callEvolutionApi('/send/text', 'POST', {
+                            number: senderNumberClean,
+                            textMessage: {
+                                text: aiData.response
+                            }
+                        });
+                    } else {
+                        console.error(`[WEBHOOK] Edge Function failed or returned no text response. Error: ${aiData.error || 'No response text.'}`);
+                        await callEvolutionApi('/send/text', 'POST', {
+                            number: senderNumberClean,
+                            textMessage: {
+                                text: "Desculpe, o agente de IA encontrou um erro interno ao processar sua mensagem."
+                            }
+                        });
+                    }
+
+                } catch (error) {
+                    console.error("[WEBHOOK ERROR] Failed to call Edge Function or send message:", error);
+                    await callEvolutionApi('/send/text', 'POST', {
+                        number: senderNumberClean,
+                        textMessage: {
+                            text: "Desculpe, houve um erro de comunicação com o servidor de IA."
+                        }
+                    });
+                }
             }
         }
-        client = null;
-        currentUserId = null;
-    } else if (currentUserId !== userId) {
-        console.log(`Warning: Disconnect request for user ${userId}, but current active client is for ${currentUserId}. Only updating DB status.`);
     }
     
-    // 2. Limpa os arquivos de sessão local para evitar reconexão automática
-    await clearLocalSession(userId);
-    
-    // 3. Garante que o status no DB seja 'disconnected'
-    const dbUpdateResult = await updateSessionStatus(userId, 'disconnected', null);
-    
-    if (dbUpdateResult.success) {
-        // 4. NOVO: Inicia imediatamente uma nova sessão para gerar um novo QR Code
-        console.log(`[DISCONNECT] Successfully disconnected. Starting new session for user ${userId}.`);
-        initializeClient(userId);
-        
-        return res.json({ status: 'restarting', message: 'Session disconnected and new connection process started.' });
-    } else {
-        return res.status(500).json({ error: `Failed to update session status in database: ${dbUpdateResult.error}` });
-    }
-});
-
-// Endpoint to check status (optional, but useful)
-app.get('/api/whatsapp/status/:userId', async (req, res) => {
-    const { userId } = req.params;
-    
-    const { data, error } = await supabase
-        .from('whatsapp_sessions')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-        
-    if (error && error.code !== 'PGRST116') {
-        return res.status(500).json({ error: error.message });
-    }
-    
-    return res.json({ 
-        status: data ? data.status : 'disconnected',
-        qrCode: data ? data.qr_code_data : null,
-        message: data ? 'Session status retrieved.' : 'No session found.'
-    });
+    return res.status(200).send('Webhook processed.');
 });
 
 
-// =======================================================
-// INÍCIO: Implementação do Graceful Shutdown (ALTERAÇÃO CHAVE)
-// Esta função garante que o cliente WhatsApp feche limpo em caso de desligamento do Fly.io.
-// =======================================================
+// --- Server Initialization ---
 
 function shutdown(signal) {
-    console.log(`[SHUTDOWN] Recebido sinal de desligamento: ${signal}. Iniciando encerramento elegante...`);
-
-    // 1. Destrói o cliente WhatsApp de forma limpa
-    // 'client' está definido no escopo global e acessível aqui.
-    if (client && client.destroy) {
-        client.destroy();
-        console.log('[SHUTDOWN] Cliente WhatsApp destruído. Sessão fechada.');
-    }
-
-    // 2. Encerra o processo Node.js
+    console.log(`[SHUTDOWN] Received signal: ${signal}. Shutting down...`);
     setTimeout(() => {
         process.exit(0);
-    }, 500); // Dá um tempo para os logs serem escritos/processados
+    }, 500); 
 }
 
-// Monitorar os sinais de desligamento padrão do Fly.io (SIGINT e SIGTERM)
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-// =======================================================
-// FIM: Implementação do Graceful Shutdown
-// =======================================================
-
-
-app.listen(PORT, HOST, () => {
-    console.log(`WhatsApp Backend running on http://${HOST}:${PORT}`);
-    console.log(`GEMINI_API_KEY is set: ${!!GEMINI_API_KEY}`); // Log para debug
+app.listen(PORT, HOST, async () => {
+    console.log(`Evolution API Backend running on http://${HOST}:${PORT}`);
+    // Register webhook on startup
+    if (BACKEND_PUBLIC_URL) {
+        await registerWebhook();
+    } else {
+        console.warn("BACKEND_PUBLIC_URL (FLY_APP_URL) is missing. Webhook registration skipped. Please set this variable.");
+    }
 });

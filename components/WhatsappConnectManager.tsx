@@ -92,10 +92,10 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
     }, [session?.status, onUpdateStatus, isConnected]);
 
 
-    // Função para iniciar a conexão (chama o Fly.io Backend)
+    // Função para iniciar a conexão (chama o Backend)
     const startConnection = async () => {
         if (!WHATSAPP_BACKEND_URL) {
-            setError("VITE_WHATSAPP_BACKEND_URL não configurada. Por favor, configure a URL do seu servidor Fly.io.");
+            setError("VITE_WHATSAPP_BACKEND_URL não configurada. Por favor, configure a URL pública do seu Backend Node.js (EasyPanel).");
             return;
         }
         
@@ -133,13 +133,13 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 console.log("[WhatsappManager] START OK. Resposta:", data);
             } else {
                 console.error("[WhatsappManager] START Falhou. Resposta:", data);
-                setError(data.error || 'Falha ao iniciar a conexão no servidor Fly.io.');
+                setError(data.error || 'Falha ao iniciar a conexão no servidor Backend.');
                 setSession(null);
             }
 
         } catch (err) {
             console.error("[WhatsappManager] Erro de rede ao chamar START:", err);
-            setError('Erro de rede ao chamar o Fly.io Backend. Verifique a URL.');
+            setError('Erro de rede ao chamar o Backend. Verifique a URL.');
             setSession(null);
         } finally {
             setLoading(false);
@@ -184,7 +184,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                     last_updated: new Date().toISOString()
                 }));
             } else {
-                let errorData: { error: string } = { error: `Erro HTTP ${response.status}: Falha interna no servidor Fly.io.` };
+                let errorData: { error: string } = { error: `Erro HTTP ${response.status}: Falha interna no servidor Backend.` };
                 try {
                     const jsonResponse = await response.json();
                     errorData.error = jsonResponse.error || errorData.error;
@@ -198,7 +198,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
             
         } catch (err) {
             console.error("[WhatsappManager] Erro de rede ao chamar DISCONNECT:", err);
-            setError('Erro de rede ao chamar o Fly.io Backend para desconexão.');
+            setError('Erro de rede ao chamar o Backend para desconexão.');
         } finally {
             setLoading(false); 
         }
@@ -217,7 +217,7 @@ const WhatsappConnectManager: React.FC<WhatsappConnectManagerProps> = ({ isConne
                 <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
                     <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" />
                     <p className="text-sm">
-                        **ERRO DE CONFIGURAÇÃO:** A variável de ambiente `VITE_WHATSAPP_BACKEND_URL` não está definida. Por favor, adicione a URL do seu Fly.io (`https://whatsapp-backend-silent-mountain-8291.fly.dev`) ao arquivo `.env.local` e reinicie o aplicativo.
+                        **ERRO DE CONFIGURAÇÃO:** A variável de ambiente `VITE_WHATSAPP_BACKEND_URL` não está definida. Por favor, adicione a URL pública do seu Backend Node.js (EasyPanel) ao arquivo `.env.local` e reinicie o aplicativo.
                     </p>
                 </div>
             </div>
