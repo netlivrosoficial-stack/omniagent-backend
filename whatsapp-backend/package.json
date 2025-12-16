@@ -4,7 +4,7 @@
   "description": "Dedicated server for managing WhatsApp session and relaying messages to Gemini AI.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "exec node server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
