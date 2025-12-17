@@ -19,10 +19,14 @@ export interface TrainingItem {
   source?: string;
 }
 
+export type AIProvider = 'gemini' | 'openai';
+
 export interface AgentConfig {
   name: string;
   personality: string;
-  apiKey: string; // Novo campo para a chave de API
+  aiProvider: AIProvider; // Novo campo para selecionar o provedor
+  apiKey: string; // Chave do Gemini (usada no frontend/simulador)
+  openAIApiKey: string; // Chave do OpenAI (usada no frontend/simulador)
   modules: {
     sales: boolean;
     support: boolean;

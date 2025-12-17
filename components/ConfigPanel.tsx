@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AgentConfig } from '../types';
+import { AgentConfig, AIProvider } from '../types';
 import { RefreshCw, Save, Check } from 'lucide-react';
 import { SUPREME_PROMPT_DEFAULT } from '../constants';
 
@@ -28,7 +28,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
   };
   
   const handleSave = () => {
-      // A lógica de salvamento real (localStorage) já está em App.tsx via useEffect.
+      // A lógica de salvamento real (Supabase) já está em useAgentConfig via useEffect.
       // Aqui, apenas simulamos o processo e fornecemos feedback visual.
       setIsSaving(true);
       setTimeout(() => {
@@ -77,17 +77,46 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, setConfig }) => {
           </div>
         </div>
         
-        {/* Campo para a Chave de API */}
+        {/* Seletor de Provedor de IA */}
         <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-400 mb-2">Chave de API do Gemini (Frontend)</label>
-            <input 
-              type="password"
-              value={config.apiKey}
-              onChange={(e) => setConfig({...config, apiKey: e.target.value})}
-              placeholder="Insira sua chave de API do Google Gemini aqui"
+            <label className="block text-sm font-medium text-slate-400 mb-2">Provedor de Inteligência Artificial</label>
+            <select 
+              value={config.aiProvider}
+              onChange={(e) => setConfig({...config, aiProvider: e.target.value as AIProvider})}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none"
-            />
-            <p className="text-xs text-slate-500 mt-1">Esta chave é usada apenas para o Simulador e é salva localmente no seu navegador.</p>
+            >
+              <option value="gemini">Google Gemini (Recomendado)</option>
+              <option value="openai">OpenAI (GPT-4)</option>
+            </select>
+            <p className="text-xs text-slate-500 mt-1">O provedor selecionado será usado no Simulador e no Webhook do WhatsApp.</p>
+        </div>
+        
+        {/* Campos de Chave de API */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Chave de API do Gemini (Frontend)</label>
+                <input 
+                  type="password"
+                  value={config.apiKey}
+                  onChange={(e) => setConfig({...config, apiKey: e.target.value})}
+                  placeholder="Insira sua chave do Gemini aqui"
+                  disabled={config.aiProvider !== 'gemini'}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none disabled:opacity-50"
+                />
+                <p className="text-xs text-slate-500 mt-1">Usada para o Simulador (se Gemini for o provedor).</p>
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Chave de API do OpenAI (Frontend)</label>
+                <input 
+                  type="password"
+                  value={config.openAIApiKey}
+                  onChange={(e) => setConfig({...config, openAIApiKey: e.target.value})}
+                  placeholder="Insira sua chave do OpenAI aqui"
+                  disabled={config.aiProvider !== 'openai'}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-blue-500 outline-none disabled:opacity-50"
+                />
+                <p className="text-xs text-slate-500 mt-1">Usada para o Simulador (se OpenAI for o provedor).</p>
+            </div>
         </div>
 
         <div className="mb-6">

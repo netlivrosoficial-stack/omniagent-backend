@@ -12,7 +12,7 @@ import { AgentConfig, AppView } from './types';
 import { GeminiService } from './services/geminiService';
 import { useAuth } from './src/SessionContextProvider';
 import { useAgentConfig } from './src/hooks/useAgentConfig'; // Importando o novo hook
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 const App: React.FC = () => {
   const { user } = useAuth();
@@ -21,22 +21,17 @@ const App: React.FC = () => {
   // Usando o novo hook para gerenciar a configuração
   const { config, setConfig, isLoading: isConfigLoading } = useAgentConfig();
 
-  // Inicializa o serviço Gemini usando a chave da configuração.
+  // Inicializa o serviço Gemini APENAS se for o provedor selecionado
   const geminiService = useMemo(() => {
-    if (!config.apiKey || !user) return null; 
+    if (config.aiProvider !== 'gemini' || !config.apiKey || !user) return null; 
     try {
         return new GeminiService(config.apiKey);
     } catch (e) {
         console.error("Failed to initialize Gemini Service:", e);
         return null;
     }
-  }, [config.apiKey, user]);
+  }, [config.aiProvider, config.apiKey, user]);
   
-  // Removendo o useEffect de localStorage, agora a persistência é no hook.
-  // useEffect(() => {
-  //   localStorage.setItem('agent-config', JSON.stringify(config));
-  // }, [config]);
-
   
   const renderView = () => {
     if (isConfigLoading) {
@@ -52,7 +47,14 @@ const App: React.FC = () => {
       case AppView.DASHBOARD:
         return <Dashboard />;
       case AppView.SIMULATOR:
-        if (!geminiService) return <div className="text-center p-8 text-slate-400">O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API na tela de Configuração do Agente.</div>;
+        if (config.aiProvider === 'gemini' && !geminiService) {
+            return (
+                <div className="text-center p-8 text-slate-400 bg-slate-800/50 rounded-xl border border-red-700">
+                    <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-3" />
+                    <p>O Serviço Gemini não pôde ser inicializado. Por favor, insira sua chave de API do Gemini na tela de Configuração do Agente.</p>
+                </div>
+            );
+        }
         return <Simulator config={config} geminiService={geminiService} />;
       case AppView.LEADS:
         return <LeadsPanel />;

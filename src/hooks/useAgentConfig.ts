@@ -6,7 +6,9 @@ import { SUPREME_PROMPT_DEFAULT } from '../../constants';
 const DEFAULT_CONFIG: AgentConfig = {
     name: 'OmniAgent',
     personality: 'Professional',
-    apiKey: '',
+    aiProvider: 'gemini', // Padrão para Gemini
+    apiKey: '', // Chave do Gemini
+    openAIApiKey: '', // Chave do OpenAI
     modules: { sales: true, support: true, onboarding: false, audio: false },
     channels: { telegram: false, whatsappCloud: false, whatsapp: true, messenger: false },
     integrations: { elevenLabs: false, googleCalendar: false, plugChat: false, eVendi: false },
@@ -45,6 +47,9 @@ export const useAgentConfig = () => {
                 channels: { ...DEFAULT_CONFIG.channels, ...loadedConfig.channels },
                 integrations: { ...DEFAULT_CONFIG.integrations, ...loadedConfig.integrations },
                 trainingData: loadedConfig.trainingData || [],
+                // Garante que o novo campo aiProvider exista
+                aiProvider: loadedConfig.aiProvider || DEFAULT_CONFIG.aiProvider,
+                openAIApiKey: loadedConfig.openAIApiKey || DEFAULT_CONFIG.openAIApiKey,
             };
             
             setConfig(mergedConfig);
