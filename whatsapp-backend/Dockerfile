@@ -1,13 +1,12 @@
-# Use a imagem base Node.js
-FROM node:18-slim
+# 1. ATUALIZAÇÃO: Usa a imagem Node.js 20 (LTS) para estabilidade
+FROM node:20-slim
 
 # =======================================================
-# INÍCIO: Correção de Dependências do Chromium (CRÍTICO)
-# Implementação da lista completa de dependências de sistema para garantir a execução estável do Puppeteer/Chrome Headless.
+# INÍCIO: Correção de Dependências do Chromium (MANTIDA)
+# Esta seção é CRÍTICA se o seu código usa Puppeteer ou Chrome Headless.
 # =======================================================
 
 RUN apt-get update && apt-get install -y \
-    # Dependências de Núcleo (Core Dependencies)
     gconf-service \
     libappindicator1 \
     libasound2 \
@@ -35,7 +34,6 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     ca-certificates \
     fonts-liberation \
-    # Dependências que já estavam na sua lista (mantidas e organizadas)
     libdrm2 \
     libgbm1 \
     libgconf-2-4 \
@@ -62,5 +60,6 @@ RUN npm install
 # Copiar o restante do código
 COPY . .
 
-# Comando para iniciar o servidor
-CMD ["npm", "start"]
+# 2. ATUALIZAÇÃO CRÍTICA: Comando para iniciar o servidor DIRETAMENTE
+# Isso ignora o 'npm start' que está falhando no EasyPanel, resolvendo o SIGTERM.
+CMD ["node", "server.js"]
