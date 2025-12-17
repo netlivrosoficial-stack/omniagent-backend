@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
 
 // --- Configuration ---
-const PORT = process.env.PORT || 3000; // Usando 3000 como padrão para EasyPanel/Hostinger
+const PORT = process.env.PORT || 80; // Alterado para 80, que é a porta do EasyPanel
 const HOST = '0.0.0.0'; 
 
 // Supabase Config
@@ -21,7 +21,6 @@ const BACKEND_PUBLIC_URL = process.env.FLY_APP_URL;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !EVOLUTION_BASE_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE_ID || !BACKEND_PUBLIC_URL) {
 	console.error("Missing required environment variables for Supabase or Evolution API.");
-	// Não saímos do processo para permitir que o Hostinger/EasyPanel inicie o container, mas logamos o erro.
 }
 
 // Initialize Supabase client with Service Role Key
@@ -30,7 +29,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 });
 
 const app = express();
-// --- CORREÇÃO 413: Aumenta o limite de tamanho do JSON para 50MB para aceitar webhooks grandes da Evolution API ---
+// --- CORREÇÃO 413: Aumenta o limite de tamanho do JSON para 50MB ---
 app.use(express.json({ limit: '50mb' }));
 
 // CORS setup
@@ -107,16 +106,8 @@ async function getAgentConfig(userId) {
 	return data ? data.config : null;
 }
 
-// Função para registrar o webhook com a Evolution API (COMENTADA)
-/*
-async function registerWebhook() {
-	// ... (código original comentado)
-}
-*/
-
 // --- API Endpoints ---
 
-// Endpoint to start the connection process (Get QR Code)
 app.post('/api/whatsapp/start', async (req, res) => {
 	const { userId } = req.body;
 	
@@ -125,10 +116,8 @@ app.post('/api/whatsapp/start', async (req, res) => {
 	}
 	
 	try {
-		// 1. Call Evolution API to start the instance connection
 		const evolutionResponse = await callEvolutionApi('/connect', 'POST');
 		
-		// 2. Check if QR code or status is immediately available
 		let qrCodeData = evolutionResponse.qrcode || evolutionResponse.code || null;
 		let status = 'connecting';
 		
@@ -137,7 +126,6 @@ app.post('/api/whatsapp/start', async (req, res) => {
 			qrCodeData = null;
 		}
 		
-		// 3. Update Supabase session status
 		await updateSessionStatus(userId, status, qrCodeData);
 		
 		return res.json({ 
@@ -151,7 +139,6 @@ app.post('/api/whatsapp/start', async (req, res) => {
 	}
 });
 
-// Endpoint to disconnect the session (Logout)
 app.post('/api/whatsapp/disconnect', async (req, res) => {
 	const { userId } = req.body;
 	
@@ -160,18 +147,14 @@ app.post('/api/whatsapp/disconnect', async (req, res) => {
 	}
 	
 	try {
-		// 1. Call Evolution API to disconnect/logout
 		await callEvolutionApi('/disconnect', 'DELETE');
 		console.log(`Evolution instance ${EVOLUTION_INSTANCE_ID} disconnected.`);
 		
-		// 2. Update Supabase status to disconnected
 		const dbUpdateResult = await updateSessionStatus(userId, 'disconnected', null);
 		
 		if (dbUpdateResult.success) {
-			// 3. Immediately restart the connection process to generate a new QR code
 			console.log(`[DISCONNECT] Successfully disconnected. Starting new session for user ${userId}.`);
 			
-			// Call the start endpoint logic internally
 			const evolutionResponse = await callEvolutionApi('/connect', 'POST');
 			
 			let qrCodeData = evolutionResponse.qrcode || evolutionResponse.code || null;
@@ -205,7 +188,6 @@ app.post('/webhook', async (req, res) => {
 	for (const event of events) {
 		const { event: eventName, instance, data } = event;
 		
-		// Evolution API usa 'instanceName' para identificar a instância, que deve ser o userId
 		const userId = instance.instanceName;	
 		
 		if (!userId) {
@@ -236,17 +218,15 @@ app.post('/webhook', async (req, res) => {
 		// 2. Handle Incoming Messages
 		if (eventName === 'MESSAGES_UPDATE' && data.messages && data.messages.length > 0) {
 			for (const msg of data.messages) {
-				// Ignora mensagens de status, grupos, ou mensagens enviadas pelo bot
 				if (msg.key.fromMe || msg.key.remoteJid.endsWith('@g.us')) continue;
 				
 				const senderNumber = msg.key.remoteJid;
 				const messageBody = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
 				
-				if (!messageBody) continue; // Apenas processa mensagens de texto
+				if (!messageBody) continue;
 
 				console.log(`[WEBHOOK] Message received from ${senderNumber}: ${messageBody}`);
 
-				// A Evolution API usa o número completo (ex: 5511999999999@s.whatsapp.net)
 				const senderNumberClean = senderNumber.split('@')[0];	
 
 				// 2.1. Buscar a configuração do agente
@@ -254,7 +234,6 @@ app.post('/webhook', async (req, res) => {
 				
 				if (!agentConfig) {
 					console.error(`[WEBHOOK] Agent config not available for user ${userId}. Cannot process message.`);
-					// Envia mensagem de erro de volta via Evolution API
 					await callEvolutionApi('/send/text', 'POST', {
 						number: senderNumberClean,	
 						textMessage: {
@@ -316,28 +295,15 @@ app.post('/webhook', async (req, res) => {
 });
 
 
-// --- Server Initialization ---
+// --- Server Initialization (AGORA SIM, A CORREÇÃO MAIS PROVÁVEL) ---
 
-function shutdown(signal) {
-	console.log(`[SHUTDOWN] Received signal: ${signal}. Shutting down...`);
-	setTimeout(() => {
-		process.exit(0);
-	}, 500);	
+try {
+    // Tenta iniciar o servidor
+    app.listen(PORT, HOST, async () => {
+        console.log(`Evolution API Backend running on http://${HOST}:${PORT}`);
+    });
+} catch (error) {
+    // Se houver um erro antes de app.listen() funcionar, ele será impresso
+    console.error('ERRO CRÍTICO NA INICIALIZAÇÃO DO SERVIDOR (ANTES DO LISTEN):', error); 
+    process.exit(1); 
 }
-
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
-
-app.listen(PORT, HOST, async () => {
-	console.log(`Evolution API Backend running on http://${HOST}:${PORT}`);
-	// Register webhook on startup
-	
-	// LINHAS COMENTADAS PARA EVITAR O ERRO 404 NO STARTUP
-	/*
-	if (BACKEND_PUBLIC_URL) {
-		await registerWebhook();
-	} else {
-		console.warn("BACKEND_PUBLIC_URL (FLY_APP_URL) is missing. Webhook registration skipped. Please set this variable.");
-	}
-	*/
-});
