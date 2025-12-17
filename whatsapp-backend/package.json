@@ -1,6 +1,6 @@
 {
   "name": "omniagent-whatsapp-backend",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Dedicated server for managing WhatsApp session and relaying messages to Gemini AI.",
   "main": "server.js",
   "scripts": {

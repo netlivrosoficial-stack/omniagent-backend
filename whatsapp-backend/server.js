@@ -1,4 +1,3 @@
-// OmniAgent WhatsApp Backend v1.0.1 - Sincronização
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const axios = require('axios');
