@@ -34,7 +34,7 @@ app.use(express.json({ limit: '50mb' }));
 
 // --- ROTAS DE SAÚDE (Para acabar com o 404 do Easypanel) ---
 app.get('/', (req, res) => {
-    res.status(200).send('🚀 Backend Omniagente online na porta 80!');
+    res.status(200).send('🚀 Backend Omniagente Ativo!');
 });
 
 app.get('/health', (req, res) => {
