@@ -39,16 +39,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- ROTA DE DIAGNÓSTICO ---
-// Corrigido: Garantindo que o Easypanel veja o status "online"
-app.get('/', (req, res) => {
-    res.status(200).json({
-        status: "online",
-        message: "Omniagent Backend is running on Easypanel",
-        timestamp: new Date().toISOString()
-    });
-});
-
 // --- Tool Definitions ---
 const toolsDefOpenAI = [
     {
@@ -133,8 +123,110 @@ async function getAgentConfig(userId) {
     return data ? data.config : null;
 }
 
-// --- WEBHOOK PRINCIPAL (CORRIGIDO) ---
-app.post('/webhook/evolution', async (req, res) => {
+// --- API Endpoints para Conexão ---
+
+app.post('/api/whatsapp/start', async (req, res) => {
+	const { userId } = req.body;
+	if (!userId) return res.status(400).json({ error: 'Missing userId' });
+	try {
+		const evolutionResponse = await callEvolutionApi('/connect', 'POST');
+		let qrCodeData = evolutionResponse.qrcode || evolutionResponse.code || null;
+		let status = evolutionResponse.state === 'CONNECTED' ? 'connected' : 'connecting';
+		await updateSessionStatus(userId, status, qrCodeData);
+		return res.json({ status: 'starting', evolutionResponse });
+	} catch (e) {
+		return res.status(500).json({ error: e.message });
+	}
+});
+
+app.post('/api/whatsapp/disconnect', async (req, res) => {
+	const { userId } = req.body;
+	if (!userId) return res.status(400).json({ error: 'Missing userId' });
+	try {
+		await callEvolutionApi('/disconnect', 'DELETE');
+		await updateSessionStatus(userId, 'disconnected', null);
+		const evolutionResponse = await callEvolutionApi('/connect', 'POST');
+		let qrCodeData = evolutionResponse.qrcode || evolutionResponse.code || null;
+		let status = evolutionResponse.state === 'CONNECTED' ? 'connected' : 'connecting';
+		await updateSessionStatus(userId, status, qrCodeData);
+		return res.json({ status: 'restarting' });
+	} catch (e) {
+		return res.status(500).json({ error: e.message });
+	}
+});
+
+// --- Funções de Processamento de IA ---
+
+async function processMessageWithOpenAI(messageBody, agentConfig) {
+    const apiKey = OPENAI_API_KEY_ENV || agentConfig.openAIApiKey;
+    const openai = new OpenAI({ apiKey });
+    
+    let finalSystemInstruction = agentConfig.systemInstruction;
+    if (agentConfig.trainingData?.length > 0) {
+        const kb = agentConfig.trainingData.map(item => `- ${item.content}`).join('\n');
+        finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${kb}`;
+    }
+    
+    let messages = [
+        { role: "system", content: finalSystemInstruction },
+        { role: "user", content: messageBody }
+    ];
+    
+    let aiResponseText = "";
+    
+    // Loop de Tool Calling (máximo 5 iterações)
+    for (let i = 0; i < 5; i++) {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages,
+            tools: toolsDefOpenAI,
+        });
+        
+        const responseMessage = response.choices[0].message;
+        
+        if (responseMessage.tool_calls) {
+            messages.push(responseMessage);
+            
+            for (const toolCall of responseMessage.tool_calls) {
+                const functionName = toolCall.function.name;
+                const functionArgs = JSON.parse(toolCall.function.arguments);
+                
+                const toolResult = await handleToolCall(functionName, functionArgs);
+                
+                messages.push({
+                    tool_call_id: toolCall.id,
+                    role: "tool",
+                    name: functionName,
+                    content: toolResult,
+                });
+            }
+        } else {
+            aiResponseText = responseMessage.content;
+            break;
+        }
+    }
+    return { response: aiResponseText };
+}
+
+async function processMessageWithGemini(messageBody, agentConfig) {
+    const apiKey = GEMINI_API_KEY_ENV || agentConfig.apiKey;
+    const response = await fetch(EDGE_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: messageBody, sender: 'whatsapp-backend', agentConfig: { ...agentConfig, apiKey } }),
+    });
+    
+    const aiData = await response.json();
+
+    if (!response.ok) {
+        throw new Error(aiData.error || 'Erro desconhecido na Edge Function do Gemini.');
+    }
+    
+    return { response: aiData.response, toolCallsExecuted: aiData.toolCallsExecuted };
+}
+
+// --- Função centralizada para o Webhook ---
+async function handleWebhook(req, res) {
     // Evolution envia um objeto único, não necessariamente um array
     const event = req.body;
     
@@ -166,62 +258,11 @@ app.post('/webhook/evolution', async (req, res) => {
                 const agentConfig = await getAgentConfig(userId);
                 if (agentConfig) {
                     try {
-                        let aiResponse;
-                        if (agentConfig.aiProvider === 'openai') {
-                            const openai = new OpenAI({ apiKey: OPENAI_API_KEY_ENV || agentConfig.openAIApiKey });
-                            
-                            // Adicionar dados de treinamento ao prompt do sistema
-                            let finalSystemInstruction = agentConfig.systemInstruction;
-                            if (agentConfig.trainingData?.length > 0) {
-                                const kb = agentConfig.trainingData.map(item => `- ${item.content}`).join('\n');
-                                finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${kb}`;
-                            }
-                            
-                            const completion = await openai.chat.completions.create({
-                                model: "gpt-4o-mini",
-                                messages: [{ role: "system", content: finalSystemInstruction }, { role: "user", content: messageBody }],
-                                tools: toolsDefOpenAI, // Incluindo ferramentas
-                            });
-                            
-                            const responseMessage = completion.choices[0].message;
-                            
-                            if (responseMessage.tool_calls) {
-                                // Se houver chamada de ferramenta, executa e envia o resultado de volta (apenas 1 iteração para simplificar)
-                                const toolCall = responseMessage.tool_calls[0];
-                                const functionName = toolCall.function.name;
-                                const functionArgs = JSON.parse(toolCall.function.arguments);
-                                
-                                const toolResult = await handleToolCall(functionName, functionArgs);
-                                
-                                // Segunda chamada para obter a resposta final
-                                const secondCompletion = await openai.chat.completions.create({
-                                    model: "gpt-4o-mini",
-                                    messages: [
-                                        { role: "system", content: finalSystemInstruction }, 
-                                        { role: "user", content: messageBody },
-                                        responseMessage, // A mensagem original do assistente com a chamada de função
-                                        {
-                                            tool_call_id: toolCall.id,
-                                            role: "tool",
-                                            name: functionName,
-                                            content: toolResult,
-                                        }
-                                    ],
-                                });
-                                aiResponse = secondCompletion.choices[0].message.content;
-                                
-                            } else {
-                                aiResponse = responseMessage.content;
-                            }
-                            
-                        } else {
-                            // Gemini via Edge Function
-                            const geminiRes = await axios.post(EDGE_FUNCTION_URL, { 
-                                message: messageBody, 
-                                agentConfig: { ...agentConfig, apiKey: GEMINI_API_KEY_ENV || agentConfig.apiKey } 
-                            });
-                            aiResponse = geminiRes.data.response;
-                        }
+                        const aiData = agentConfig.aiProvider === 'openai' 
+                            ? await processMessageWithOpenAI(messageBody, agentConfig)
+                            : await processMessageWithGemini(messageBody, agentConfig);
+                        
+                        const aiResponse = aiData.response;
 
                         // Enviar resposta de volta para o WhatsApp
                         if (aiResponse) {
@@ -243,7 +284,27 @@ app.post('/webhook/evolution', async (req, res) => {
     }
 
     return res.status(200).send('OK');
+}
+
+// --- ROTA DE DIAGNÓSTICO E WEBHOOK RAIZ ---
+// Isso resolve o erro 404 se a Evolution chamar a URL sem o final /webhook/evolution
+app.get('/', (req, res) => {
+    res.status(200).json({
+        status: "online",
+        message: "Omniagent Backend is running on Easypanel",
+        timestamp: new Date().toISOString()
+    });
 });
+
+// Espelho da rota de webhook na raiz para evitar 404
+app.post('/', async (req, res) => {
+    console.log("Recebido POST na raiz, redirecionando logicamente para handleWebhook");
+    // Redireciona internamente para a função do webhook
+    return handleWebhook(req, res);
+});
+
+// Mantenha a rota original também por segurança
+app.post('/webhook/evolution', handleWebhook);
 
 app.listen(PORT, HOST, () => {
     console.log(`Server is up on http://${HOST}:${PORT}`);
