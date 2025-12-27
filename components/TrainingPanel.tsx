@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AgentConfig, TrainingItem } from '../types';
-import { Search, Quote, FileText, Trash2, Link, Video, Loader2, AlertTriangle } from 'lucide-react';
+import { Search, Quote, FileText, Trash2, Link, Video, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../src/integrations/supabase/client';
 import { useAuth } from '../src/SessionContextProvider';
 
@@ -20,6 +20,8 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
   const [trainingItems, setTrainingItems] = useState<TrainingItem[]>([]);
   const [isLoadingTraining, setIsLoadingTraining] = useState(true);
   const [errorTraining, setErrorTraining] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false); // Novo estado de carregamento para adição
+  const [addStatus, setAddStatus] = useState<'idle' | 'success' | 'error'>('idle'); // Novo estado de status
   const MAX_CHARS = 8192;
 
   const fetchTrainingItems = useCallback(async () => {
@@ -56,78 +58,123 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
 
   const sendWebhook = async (action: 'add' | 'delete', item: Partial<TrainingItem> & { agent_id: string }) => {
     if (!N8N_WEBHOOK_URL) {
-      console.error("N8N_WEBHOOK_URL não configurada. O webhook não será enviado.");
-      // Em um ambiente de produção, você pode querer notificar o usuário ou logar isso de forma mais robusta.
-      return;
+      const msg = "**ERRO DE CONFIGURAÇÃO:** A variável `VITE_N8N_WEBHOOK_URL` não está definida. O treinamento não será salvo.";
+      setErrorTraining(msg);
+      throw new Error(msg);
     }
 
     try {
-      await fetch(N8N_WEBHOOK_URL, {
+      const response = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, item }),
       });
+      
+      if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Falha no Webhook (Status ${response.status}): ${errorText.substring(0, 100)}...`);
+      }
+      
       console.log(`Webhook para n8n enviado com sucesso para ação: ${action}`);
     } catch (webhookError) {
       console.error("Erro ao enviar webhook para n8n:", webhookError);
-      setErrorTraining("Erro ao sincronizar com o n8n. Verifique a URL do webhook.");
+      setErrorTraining(`Erro ao sincronizar com o n8n. Verifique a URL do webhook e o fluxo do n8n. Detalhes: ${webhookError.message}`);
+      throw webhookError; // Re-lança para ser capturado pelo handler de adição
     }
   };
 
   const handleAddText = async () => {
-    if (!newText.trim() || !user) return;
+    if (!newText.trim() || !user || isAdding) return;
+    
+    setIsAdding(true);
+    setAddStatus('idle');
+    setErrorTraining(null);
+    
+    const content = newText.trim();
     const newItem: TrainingItem = {
-      id: new Date().toISOString(), // ID temporário, o n8n gerará o real
+      id: `temp-${Date.now()}`, // ID temporário
       type: 'text',
-      content: newText.trim()
+      content: content
     };
 
-    // Adiciona o item localmente para feedback imediato
+    // Adiciona o item localmente (temporariamente)
     setTrainingItems(prev => [newItem, ...prev]);
     setNewText('');
 
-    // Envia para o n8n, incluindo o ID temporário
-    await sendWebhook('add', { 
-        id: newItem.id, // Incluindo o ID temporário
-        agent_id: user.id, 
-        content: newItem.content, 
-        metadata: { type: newItem.type } 
-    });
-    fetchTrainingItems(); // Refetch para obter o ID real e o embedding
+    try {
+        await sendWebhook('add', { 
+            id: newItem.id, 
+            agent_id: user.id, 
+            content: content, 
+            metadata: { type: newItem.type } 
+        });
+        setAddStatus('success');
+        // Após o sucesso, recarrega a lista para obter o ID real e confirmar o salvamento
+        await fetchTrainingItems(); 
+    } catch (e) {
+        setAddStatus('error');
+        // Remove o item temporário se falhar
+        setTrainingItems(prev => prev.filter(item => item.id !== newItem.id));
+    } finally {
+        setIsAdding(false);
+        setTimeout(() => setAddStatus('idle'), 3000);
+    }
   };
   
   const handleAddWebsite = async () => {
-    if (!newUrl.trim() || !newUrl.startsWith('http') || !user) return; 
+    if (!newUrl.trim() || !newUrl.startsWith('http') || !user || isAdding) return; 
     
+    setIsAdding(true);
+    setAddStatus('idle');
+    setErrorTraining(null);
+    
+    const url = newUrl.trim();
     const newItem: TrainingItem = {
-      id: new Date().toISOString(), // ID temporário
+      id: `temp-${Date.now()}`, // ID temporário
       type: 'website',
-      content: `URL de treinamento: ${newUrl.trim()}`, 
-      source: newUrl.trim()
+      content: `URL de treinamento: ${url}`, 
+      source: url
     };
 
-    // Adiciona o item localmente para feedback imediato
+    // Adiciona o item localmente (temporariamente)
     setTrainingItems(prev => [newItem, ...prev]);
     setNewUrl('');
 
-    // Envia para o n8n, incluindo o ID temporário
-    await sendWebhook('add', { 
-        id: newItem.id, // Incluindo o ID temporário
-        agent_id: user.id, 
-        content: newItem.content, 
-        metadata: { type: newItem.type, source: newItem.source } 
-    });
-    fetchTrainingItems(); // Refetch para obter o ID real e o embedding
+    try {
+        await sendWebhook('add', { 
+            id: newItem.id, 
+            agent_id: user.id, 
+            content: newItem.content, 
+            metadata: { type: newItem.type, source: newItem.source } 
+        });
+        setAddStatus('success');
+        await fetchTrainingItems(); 
+    } catch (e) {
+        setAddStatus('error');
+        setTrainingItems(prev => prev.filter(item => item.id !== newItem.id));
+    } finally {
+        setIsAdding(false);
+        setTimeout(() => setAddStatus('idle'), 3000);
+    }
   };
 
   const handleDeleteItem = async (id: string) => {
     if (!user) return;
+    
     // Remove o item localmente para feedback imediato
+    const itemToDelete = trainingItems.find(item => item.id === id);
     setTrainingItems(prev => prev.filter(item => item.id !== id));
 
-    // Envia para o n8n
-    await sendWebhook('delete', { agent_id: user.id, id });
-    fetchTrainingItems(); // Refetch para garantir a sincronização
+    try {
+        await sendWebhook('delete', { agent_id: user.id, id });
+        // Não precisamos de fetch se o webhook for bem-sucedido, pois já removemos localmente.
+    } catch (e) {
+        // Se falhar, adiciona o item de volta e mostra erro
+        if (itemToDelete) {
+            setTrainingItems(prev => [itemToDelete, ...prev]);
+        }
+        setErrorTraining(`Falha ao deletar item. Tente novamente. Detalhes: ${e.message}`);
+    }
   };
 
   const tabs = [
@@ -178,10 +225,10 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
                   </span>
                   <button
                     onClick={handleAddText}
-                    disabled={!newText.trim()}
+                    disabled={!newText.trim() || isAdding}
                     className="bg-blue-600 text-white font-medium px-5 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
                   >
-                    Cadastrar
+                    {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cadastrar'}
                   </button>
                 </div>
               </div>
@@ -211,10 +258,10 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
                 <span className="text-xs text-slate-500">O agente irá rastrear o conteúdo desta URL para treinamento.</span>
                 <button
                   onClick={handleAddWebsite}
-                  disabled={!newUrl.trim() || !newUrl.startsWith('http')}
+                  disabled={!newUrl.trim() || !newUrl.startsWith('http') || isAdding}
                   className="bg-blue-600 text-white font-medium px-5 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
                 >
-                  Adicionar URL
+                  {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar URL'}
                 </button>
               </div>
           </div>
@@ -244,7 +291,7 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
           );
       }
 
-      if (errorTraining) {
+      if (errorTraining && !isAdding) { // Mostra erro de carregamento/sincronização geral
           return (
               <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
                   <AlertTriangle className="w-5 h-5 mr-3" />
@@ -326,6 +373,20 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
           ))}
         </nav>
       </div>
+      
+      {/* Feedback de Adição */}
+      {addStatus === 'success' && (
+          <div className="p-3 bg-emerald-900/30 text-emerald-400 rounded-lg flex items-center space-x-3">
+              <CheckCircle2 className="w-5 h-5" />
+              <p className="text-sm font-medium">Item de treinamento adicionado com sucesso! Sincronizando com o banco de dados.</p>
+          </div>
+      )}
+      {addStatus === 'error' && errorTraining && (
+          <div className="p-3 bg-red-900/30 text-red-400 rounded-lg flex items-center space-x-3">
+              <AlertTriangle className="w-5 h-5" />
+              <p className="text-sm font-medium">Falha ao adicionar item: {errorTraining}</p>
+          </div>
+      )}
       
       {/* Content */}
       <div>
