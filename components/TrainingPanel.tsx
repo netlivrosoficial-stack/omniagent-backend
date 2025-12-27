@@ -76,7 +76,7 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
       }
       
       console.log(`Webhook para n8n enviado com sucesso para ação: ${action}`);
-    } catch (webhookError) {
+    } catch (webhookError: any) {
       console.error("Erro ao enviar webhook para n8n:", webhookError);
       setErrorTraining(`Erro ao sincronizar com o n8n. Verifique a URL do webhook e o fluxo do n8n. Detalhes: ${webhookError.message}`);
       throw webhookError; // Re-lança para ser capturado pelo handler de adição
@@ -91,30 +91,24 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
     setErrorTraining(null);
     
     const content = newText.trim();
-    const newItem: TrainingItem = {
-      id: `temp-${Date.now()}`, // ID temporário
-      type: 'text',
-      content: content
-    };
-
-    // Adiciona o item localmente (temporariamente)
-    setTrainingItems(prev => [newItem, ...prev]);
-    setNewText('');
+    // Geramos um ID temporário apenas para o payload do webhook, se necessário,
+    // mas não o adicionamos ao estado local.
+    const tempId = `temp-${Date.now()}`; 
 
     try {
         await sendWebhook('add', { 
-            id: newItem.id, 
+            id: tempId, 
             agent_id: user.id, 
             content: content, 
-            metadata: { type: newItem.type } 
+            metadata: { type: 'text' } 
         });
         setAddStatus('success');
+        setNewText(''); // Limpa o input
         // Após o sucesso, recarrega a lista para obter o ID real e confirmar o salvamento
         await fetchTrainingItems(); 
-    } catch (e) {
+    } catch (e: any) {
         setAddStatus('error');
-        // Remove o item temporário se falhar
-        setTrainingItems(prev => prev.filter(item => item.id !== newItem.id));
+        setErrorTraining(e.message);
     } finally {
         setIsAdding(false);
         setTimeout(() => setAddStatus('idle'), 3000);
@@ -129,29 +123,21 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
     setErrorTraining(null);
     
     const url = newUrl.trim();
-    const newItem: TrainingItem = {
-      id: `temp-${Date.now()}`, // ID temporário
-      type: 'website',
-      content: `URL de treinamento: ${url}`, 
-      source: url
-    };
-
-    // Adiciona o item localmente (temporariamente)
-    setTrainingItems(prev => [newItem, ...prev]);
-    setNewUrl('');
+    const tempId = `temp-${Date.now()}`; 
 
     try {
         await sendWebhook('add', { 
-            id: newItem.id, 
+            id: tempId, 
             agent_id: user.id, 
-            content: newItem.content, 
-            metadata: { type: newItem.type, source: newItem.source } 
+            content: `URL de treinamento: ${url}`, 
+            metadata: { type: 'website', source: url } 
         });
         setAddStatus('success');
+        setNewUrl(''); // Limpa o input
         await fetchTrainingItems(); 
-    } catch (e) {
+    } catch (e: any) {
         setAddStatus('error');
-        setTrainingItems(prev => prev.filter(item => item.id !== newItem.id));
+        setErrorTraining(e.message);
     } finally {
         setIsAdding(false);
         setTimeout(() => setAddStatus('idle'), 3000);
@@ -167,8 +153,8 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
 
     try {
         await sendWebhook('delete', { agent_id: user.id, id });
-        // Não precisamos de fetch se o webhook for bem-sucedido, pois já removemos localmente.
-    } catch (e) {
+        // Se o webhook for bem-sucedido, o item já foi removido localmente.
+    } catch (e: any) {
         // Se falhar, adiciona o item de volta e mostra erro
         if (itemToDelete) {
             setTrainingItems(prev => [itemToDelete, ...prev]);
