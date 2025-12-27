@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AgentConfig, TrainingItem } from '../types';
-import { Search, Quote, FileText, Trash2, Link, Video } from 'lucide-react';
+import { Search, Quote, FileText, Trash2, Link, Video, Loader2, AlertTriangle } from 'lucide-react';
+import { supabase } from '../src/integrations/supabase/client';
+import { useAuth } from '../src/SessionContextProvider';
+
+// URL do webhook do n8n para processar embeddings
+const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
 
 interface TrainingPanelProps {
   config: AgentConfig;
@@ -8,48 +13,119 @@ interface TrainingPanelProps {
 }
 
 const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'text' | 'website' | 'video' | 'document'>('text');
   const [newText, setNewText] = useState('');
   const [newUrl, setNewUrl] = useState('');
-  const MAX_CHARS = 8192; // Aumentado de 1024 para 8192
+  const [trainingItems, setTrainingItems] = useState<TrainingItem[]>([]);
+  const [isLoadingTraining, setIsLoadingTraining] = useState(true);
+  const [errorTraining, setErrorTraining] = useState<string | null>(null);
+  const MAX_CHARS = 8192;
 
-  const handleAddText = () => {
-    if (!newText.trim()) return;
+  const fetchTrainingItems = useCallback(async () => {
+    if (!user) return;
+    setIsLoadingTraining(true);
+    setErrorTraining(null);
+
+    const { data, error } = await supabase
+      .from('training_data')
+      .select('*')
+      .eq('agent_id', user.id) // Assumindo que agent_id é o user.id
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching training data:", error);
+      setErrorTraining(error.message);
+      setTrainingItems([]);
+    } else {
+      // Mapeia os dados do Supabase para o tipo TrainingItem
+      const fetchedItems: TrainingItem[] = data.map((item: any) => ({
+        id: item.id,
+        type: item.metadata?.type || 'text', // Assume 'text' se não houver metadata
+        content: item.content,
+        source: item.metadata?.source || undefined,
+      }));
+      setTrainingItems(fetchedItems);
+    }
+    setIsLoadingTraining(false);
+  }, [user]);
+
+  useEffect(() => {
+    fetchTrainingItems();
+  }, [fetchTrainingItems, activeTab]); // Refetch quando a aba muda
+
+  const sendWebhook = async (action: 'add' | 'delete', item: Partial<TrainingItem> & { agent_id: string }) => {
+    if (!N8N_WEBHOOK_URL) {
+      console.error("N8N_WEBHOOK_URL não configurada. O webhook não será enviado.");
+      // Em um ambiente de produção, você pode querer notificar o usuário ou logar isso de forma mais robusta.
+      return;
+    }
+
+    try {
+      await fetch(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, item }),
+      });
+      console.log(`Webhook para n8n enviado com sucesso para ação: ${action}`);
+    } catch (webhookError) {
+      console.error("Erro ao enviar webhook para n8n:", webhookError);
+      setErrorTraining("Erro ao sincronizar com o n8n. Verifique a URL do webhook.");
+    }
+  };
+
+  const handleAddText = async () => {
+    if (!newText.trim() || !user) return;
     const newItem: TrainingItem = {
-      id: new Date().toISOString(),
+      id: new Date().toISOString(), // ID temporário, o n8n gerará o real
       type: 'text',
       content: newText.trim()
     };
-    setConfig(prev => ({
-      ...prev, // CORREÇÃO: Espalhar o objeto 'prev' completo
-      trainingData: [...prev.trainingData, newItem]
-    }));
+
+    // Adiciona o item localmente para feedback imediato
+    setTrainingItems(prev => [newItem, ...prev]);
     setNewText('');
+
+    // Envia para o n8n
+    await sendWebhook('add', { 
+        agent_id: user.id, 
+        content: newItem.content, 
+        metadata: { type: newItem.type } 
+    });
+    fetchTrainingItems(); // Refetch para obter o ID real e o embedding
   };
   
-  const handleAddWebsite = () => {
-    // Basic URL validation
-    if (!newUrl.trim() || !newUrl.startsWith('http')) return; 
+  const handleAddWebsite = async () => {
+    if (!newUrl.trim() || !newUrl.startsWith('http') || !user) return; 
     
     const newItem: TrainingItem = {
-      id: new Date().toISOString(),
+      id: new Date().toISOString(), // ID temporário
       type: 'website',
-      // Para fins de simulação, o conteúdo é um placeholder, mas a fonte é a URL
       content: `URL de treinamento: ${newUrl.trim()}`, 
       source: newUrl.trim()
     };
-    setConfig(prev => ({
-      ...prev, // CORREÇÃO: Espalhar o objeto 'prev' completo
-      trainingData: [...prev.trainingData, newItem]
-    }));
+
+    // Adiciona o item localmente para feedback imediato
+    setTrainingItems(prev => [newItem, ...prev]);
     setNewUrl('');
+
+    // Envia para o n8n
+    await sendWebhook('add', { 
+        agent_id: user.id, 
+        content: newItem.content, 
+        metadata: { type: newItem.type, source: newItem.source } 
+    });
+    fetchTrainingItems(); // Refetch para obter o ID real e o embedding
   };
 
-  const handleDeleteItem = (id: string) => {
-    setConfig(prev => ({
-      ...prev,
-      trainingData: prev.trainingData.filter(item => item.id !== id)
-    }));
+  const handleDeleteItem = async (id: string) => {
+    if (!user) return;
+    // Remove o item localmente para feedback imediato
+    setTrainingItems(prev => prev.filter(item => item.id !== id));
+
+    // Envia para o n8n
+    await sendWebhook('delete', { agent_id: user.id, id });
+    fetchTrainingItems(); // Refetch para garantir a sincronização
   };
 
   const tabs = [
@@ -155,7 +231,25 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
   };
   
   const renderTrainingList = () => {
-      const filteredData = config.trainingData.filter(item => item.type === activeTab);
+      const filteredData = trainingItems.filter(item => item.type === activeTab);
+      
+      if (isLoadingTraining) {
+          return (
+              <div className="flex justify-center items-center py-10 text-blue-400">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                  Carregando dados de treinamento...
+              </div>
+          );
+      }
+
+      if (errorTraining) {
+          return (
+              <div className="p-4 bg-red-900/30 text-red-400 rounded-lg flex items-center">
+                  <AlertTriangle className="w-5 h-5 mr-3" />
+                  Erro ao carregar dados de treinamento: {errorTraining}
+              </div>
+          );
+      }
       
       if (filteredData.length === 0) {
           return (

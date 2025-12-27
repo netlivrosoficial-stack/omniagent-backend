@@ -90,14 +90,14 @@ serve(async (req) => {
     
     let finalSystemInstruction = agentConfig.systemInstruction;
     
-    // Adicionar dados de treinamento ao prompt do sistema
-    if (agentConfig.trainingData && agentConfig.trainingData.length > 0) {
-        const knowledgeBase = agentConfig.trainingData
-          .map((item: any) => `- ${item.content}`)
-          .join('\n');
-        
-        finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${knowledgeBase}`;
-    }
+    // A lógica de adicionar dados de treinamento foi removida daqui, pois o RAG será externo.
+    // if (agentConfig.trainingData && agentConfig.trainingData.length > 0) {
+    //     const knowledgeBase = agentConfig.trainingData
+    //       .map((item: any) => `- ${item.content}`)
+    //       .join('\n');
+    //     
+    //     finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${knowledgeBase}`;
+    // }
 
     // 1. Iniciar o chat com a configuração do agente
     const chat = ai.chats.create({

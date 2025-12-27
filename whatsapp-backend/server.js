@@ -162,10 +162,11 @@ async function processMessageWithOpenAI(messageBody, agentConfig) {
     const openai = new OpenAI({ apiKey });
     
     let finalSystemInstruction = agentConfig.systemInstruction;
-    if (agentConfig.trainingData?.length > 0) {
-        const kb = agentConfig.trainingData.map(item => `- ${item.content}`).join('\n');
-        finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${kb}`;
-    }
+    // A lógica de adicionar trainingData foi removida daqui, pois o RAG será externo.
+    // if (agentConfig.trainingData?.length > 0) {
+    //     const kb = agentConfig.trainingData.map(item => `- ${item.content}`).join('\n');
+    //     finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${kb}`;
+    // }
     
     let messages = [
         { role: "system", content: finalSystemInstruction },

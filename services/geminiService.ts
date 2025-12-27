@@ -78,13 +78,14 @@ export class GeminiService {
     try {
       let finalSystemInstruction = config.systemInstruction;
       
-      if (config.trainingData && config.trainingData.length > 0) {
-        const knowledgeBase = config.trainingData
-          .map(item => `- ${item.content}`)
-          .join('\n');
-        
-        finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${knowledgeBase}`;
-      }
+      // A lógica de adicionar trainingData foi removida daqui, pois o RAG será externo.
+      // if (config.trainingData && config.trainingData.length > 0) {
+      //   const knowledgeBase = config.trainingData
+      //     .map(item => `- ${item.content}`)
+      //     .join('\n');
+      //   
+      //   finalSystemInstruction += `\n\n# BASE DE CONHECIMENTO ADICIONAL\nUse as informações a seguir para responder a perguntas relevantes. Estas são as fontes de verdade primárias:\n${knowledgeBase}`;
+      // }
 
       const chat = this.ai.chats.create({
         model: this.modelName,

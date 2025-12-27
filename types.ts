@@ -46,7 +46,7 @@ export interface AgentConfig {
     eVendi: boolean;
   };
   systemInstruction: string;
-  trainingData: TrainingItem[];
+  // trainingData: TrainingItem[]; // Removido: Agora gerenciado em tabela separada
 }
 
 export enum AppView {

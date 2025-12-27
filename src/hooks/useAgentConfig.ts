@@ -13,7 +13,7 @@ const DEFAULT_CONFIG: AgentConfig = {
     channels: { telegram: false, whatsappCloud: false, whatsapp: true, messenger: false },
     integrations: { elevenLabs: false, googleCalendar: false, plugChat: false, eVendi: false },
     systemInstruction: SUPREME_PROMPT_DEFAULT,
-    trainingData: [],
+    // trainingData: [], // Removido
 };
 
 export const useAgentConfig = () => {
@@ -46,7 +46,7 @@ export const useAgentConfig = () => {
                 modules: { ...DEFAULT_CONFIG.modules, ...loadedConfig.modules },
                 channels: { ...DEFAULT_CONFIG.channels, ...loadedConfig.channels },
                 integrations: { ...DEFAULT_CONFIG.integrations, ...loadedConfig.integrations },
-                trainingData: loadedConfig.trainingData || [],
+                // trainingData: loadedConfig.trainingData || [], // Removido
                 // Garante que o novo campo aiProvider exista
                 aiProvider: loadedConfig.aiProvider || DEFAULT_CONFIG.aiProvider,
                 openAIApiKey: loadedConfig.openAIApiKey || DEFAULT_CONFIG.openAIApiKey,
