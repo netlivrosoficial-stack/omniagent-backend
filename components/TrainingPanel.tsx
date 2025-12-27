@@ -86,8 +86,9 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
     setTrainingItems(prev => [newItem, ...prev]);
     setNewText('');
 
-    // Envia para o n8n
+    // Envia para o n8n, incluindo o ID temporário
     await sendWebhook('add', { 
+        id: newItem.id, // Incluindo o ID temporário
         agent_id: user.id, 
         content: newItem.content, 
         metadata: { type: newItem.type } 
@@ -109,8 +110,9 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
     setTrainingItems(prev => [newItem, ...prev]);
     setNewUrl('');
 
-    // Envia para o n8n
+    // Envia para o n8n, incluindo o ID temporário
     await sendWebhook('add', { 
+        id: newItem.id, // Incluindo o ID temporário
         agent_id: user.id, 
         content: newItem.content, 
         metadata: { type: newItem.type, source: newItem.source } 
