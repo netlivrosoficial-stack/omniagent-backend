@@ -41,12 +41,33 @@ const TrainingPanel: React.FC<TrainingPanelProps> = ({ config, setConfig }) => {
       setTrainingItems([]);
     } else {
       // Mapeia os dados do Supabase para o tipo TrainingItem
-      const fetchedItems: TrainingItem[] = data.map((item: any) => ({
-        id: item.id,
-        type: item.metadata?.type || 'text', // Assume 'text' se não houver metadata
-        content: item.content,
-        source: item.metadata?.source || undefined,
-      }));
+      const fetchedItems: TrainingItem[] = data.map((item: any) => {
+        let metadata = item.metadata;
+        
+        // Adiciona lógica defensiva para garantir que metadata seja um objeto,
+        // tratando casos onde jsonb pode ser retornado como string ou null.
+        if (typeof metadata === 'string') {
+            try {
+                metadata = JSON.parse(metadata);
+            } catch (e) {
+                console.error("Failed to parse metadata string:", e);
+                metadata = {};
+            }
+        }
+        
+        if (typeof metadata !== 'object' || metadata === null) {
+            metadata = {};
+        }
+        
+        const itemType = metadata.type || 'text';
+        
+        return {
+          id: item.id,
+          type: itemType as TrainingItem['type'],
+          content: item.content,
+          source: metadata.source || undefined,
+        };
+      });
       setTrainingItems(fetchedItems);
     }
     setIsLoadingTraining(false);
